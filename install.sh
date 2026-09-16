@@ -171,17 +171,17 @@ if [ -n "$SERIAL_STARTER_DEVICE" ]; then
         /opt/victronenergy/serial-starter/stop-tty.sh "$RESOLVED_DEVICE"
     fi
     rm -f "/data/var/lib/serial-starter/$DEVICE_NAME"
-    if udevadm trigger --help 2>&1 | grep -q -- '--sysname-match'; then
-        udevadm trigger --action=add --sysname-match="$DEVICE_NAME"
-    else
-        udevadm trigger --action=add --subsystem-match=tty
-    fi
     if [ -d /service/serial-starter ]; then
         svc -t /service/serial-starter
         sleep 2
     fi
     if [ -x /opt/victronenergy/serial-starter/start-tty.sh ]; then
         /opt/victronenergy/serial-starter/start-tty.sh "$RESOLVED_DEVICE"
+    fi
+    if udevadm trigger --help 2>&1 | grep -q -- '--sysname-match'; then
+        udevadm trigger --action=add --sysname-match="$DEVICE_NAME"
+    else
+        udevadm trigger --action=add --subsystem-match=tty
     fi
 
     echo "Installed serial-starter integration for $MATCH_DESCRIPTION"

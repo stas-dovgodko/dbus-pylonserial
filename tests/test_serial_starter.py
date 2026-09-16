@@ -39,9 +39,11 @@ class SerialStarterTest(unittest.TestCase):
         cache_position = installer.index('rm -f "/data/var/lib/serial-starter/$DEVICE_NAME"')
         restart_position = installer.index("svc -t /service/serial-starter")
         start_position = installer.index("start-tty.sh")
+        trigger_position = installer.index("udevadm trigger --action=add")
         self.assertLess(stop_position, cache_position)
         self.assertLess(cache_position, restart_position)
         self.assertLess(restart_position, start_position)
+        self.assertLess(start_position, trigger_position)
         self.assertIn('stop-tty.sh "$RESOLVED_DEVICE"', installer)
         self.assertIn('start-tty.sh "$RESOLVED_DEVICE"', installer)
 
