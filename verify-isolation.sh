@@ -2,7 +2,16 @@
 set -eu
 
 SYSTEM_SERVICE="com.victronenergy.system"
-TELEMETRY_SERVICE="com.victronenergy.pylontechmonitor.rs232"
+CONFIG_FILE="/data/apps/dbus-pylontech-console/config.ini"
+TELEMETRY_SERVICE=$(sed -n 's/^[[:space:]]*service_name[[:space:]]*=[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p' "$CONFIG_FILE" | head -n 1)
+
+case "$TELEMETRY_SERVICE" in
+    com.victronenergy.pylontechmonitor.*|com.victronenergy.unsupported.pylontechmonitor_*) ;;
+    *)
+        echo "FAIL: config.ini does not contain a safe telemetry service name." >&2
+        exit 1
+        ;;
+esac
 
 active=$(dbus -y "$SYSTEM_SERVICE" /ActiveBatteryService GetValue)
 battery=$(dbus -y "$SYSTEM_SERVICE" /Dc/Battery/BatteryService GetValue)

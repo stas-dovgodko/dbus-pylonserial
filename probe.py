@@ -21,6 +21,12 @@ def _arguments():
     parser.add_argument("--baudrate", type=int, default=115200)
     parser.add_argument("--timeout", type=float, default=5.0)
     parser.add_argument(
+        "--command-delay",
+        type=float,
+        default=1.2,
+        help="Minimum delay between console commands",
+    )
+    parser.add_argument(
         "--expected-modules",
         type=int,
         default=0,
@@ -31,6 +37,14 @@ def _arguments():
         action="store_true",
         help="Print the unparsed console response instead of JSON",
     )
+    parser.add_argument(
+        "--details",
+        action="store_true",
+        help=(
+            "Also run allowlisted info/stat/bat queries for serial numbers, "
+            "cycles, SOH, and cell data"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -39,23 +53,25 @@ def main() -> int:
     if args.expected_modules < 0:
         print("--expected-modules cannot be negative", file=sys.stderr)
         return 2
+    if args.command_delay < 0:
+        print("--command-delay cannot be negative", file=sys.stderr)
+        return 2
 
     console = PylontechConsole(
         port=args.port,
         baudrate=args.baudrate,
         timeout=args.timeout,
+        command_delay=args.command_delay,
         expected_modules=args.expected_modules,
     )
     try:
-        response = console.read_pwr_response()
         if args.raw:
+            response = console.read_pwr_response()
             sys.stdout.write(response.decode("latin-1", errors="replace"))
             if not response.endswith(b"\n"):
                 sys.stdout.write("\n")
         else:
-            from pylontech_dbus.parser import parse_pwr_response
-
-            reading = parse_pwr_response(response, args.expected_modules)
+            reading = console.read_bank(include_details=args.details)
             print(json.dumps(reading.as_dict(), indent=2, sort_keys=True))
         return 0
     except Exception as exc:

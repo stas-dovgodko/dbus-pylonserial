@@ -3,7 +3,7 @@
 An isolated telemetry driver for Victron Venus OS. The driver reads the RS232
 console port of the master Pylontech/Pytes battery using the read-only `pwr`
 command and publishes the aggregated data as
-`com.victronenergy.pylontechmonitor.rs232`.
+`com.victronenergy.unsupported.pylontechmonitor_rs232`.
 
 ## Supported features
 
@@ -14,6 +14,16 @@ command and publishes the aggregated data as
 - temperature reported as the highest module temperature;
 - online and offline module counts;
 - individual module values under `/Modules/<n>/...`;
+- per-module model, barcode/serial number, hardware and firmware versions;
+- per-module manufacturer, specification, release date, software, bootloader,
+  communication version, and reported charge/discharge current limits;
+- per-module cycle count, SOH, capacity, and the complete known `stat`
+  counter set; counters with undocumented units remain explicitly marked raw;
+- individual cell voltage, temperature, SOC, remaining capacity, and
+  balancing state, plus the cell status fields, under
+  `/Modules/<n>/Cells/<n>/...`;
+- minimum and maximum cell voltage, cell-voltage spread, temperature extrema,
+  and MOS temperature when supplied by the installed firmware;
 - stale value invalidation after repeated communication failures;
 - support for `PYTES>`, `PYTES_debug>`, `pylon>`, and `pylon_debug>` prompts;
 - a standalone probe for testing serial communication without D-Bus.
@@ -22,8 +32,9 @@ command and publishes the aggregated data as
 
 The driver is **telemetry-only** and uses several independent safeguards:
 
-- its service name is restricted to the custom
-  `com.victronenergy.pylontechmonitor.*` namespace;
+- its service name is restricted to the custom telemetry namespace. The
+  default service type is `unsupported`, which GUI v2 can list as a device but
+  `dbus-systemcalc` does not treat as a battery;
 - it cannot be configured as `com.victronenergy.battery.*`, so Venus OS does
   not discover it as a main battery monitor;
 - it does not publish `/Info/MaxChargeVoltage`, `/Info/MaxChargeCurrent`,
@@ -36,8 +47,53 @@ The driver is **telemetry-only** and uses several independent safeguards:
 Consequently, the service is not offered in the Main battery monitor selector
 and is not used by `dbus-systemcalc`, ESS, DVCC, Shared Voltage Sense, or Shared
 Current Sense. Its values are available only to clients that explicitly read
-the custom service name. This isolation also means that the telemetry service
-will not appear as a regular battery in the standard Venus OS battery UI.
+the custom service name. It appears in Device List as an unsupported telemetry
+device rather than as a regular battery.
+
+## Data acquisition scope
+
+The driver uses a strict read-only command allowlist:
+
+- `pwr` every `driver.poll_interval` seconds for live module and bank values;
+- `info N` for model, barcode, firmware, hardware, specification, and cell
+  count;
+- `stat N` for cycle count, SOH, SOC, and lifetime counters;
+- `bat N` for individual cells and balancing state.
+
+The detail commands run only every `driver.details_poll_interval` seconds.
+Unsupported commands or fields are left empty. Pylontech and Pytes firmware
+varies considerably, so the presence of a D-Bus path does not imply that every
+model can populate it. The driver deliberately does not issue `config`,
+`ctrl`, `prot`, `shut`, firmware-update, calibration, reset, or arbitrary
+console commands.
+
+The console protocol exposes more commands than this driver should poll:
+
+- `time` reports the BMS clock, but the same timestamp is already included in
+  many `pwr` responses;
+- `pwr N` adds per-module event bit fields, protection lists, nominal coulomb
+  capacity, and charge/discharge duration on verified firmware. Most numeric
+  measurements duplicate `pwr`/`bat`, while event-bit semantics are not
+  documented consistently, so this variant is not polled yet;
+- `log`, `data`, and `datalist` expose historical/event data and may return
+  large or firmware-specific responses, so they are intentionally excluded
+  from the live service;
+- `soh N` exists on some models, but `stat N` already supplies the supported
+  module SOH and several Pytes firmwares do not implement `soh N`;
+- `pwrsys` can expose rack-wide capacity, extrema, and recommended limits on
+  some firmware, but often requires authenticated debug mode. This project
+  never logs in and never publishes inverter-control limits;
+- configuration, control, shutdown, reset, calibration, and update commands
+  are outside the allowlist even if a particular firmware also uses one of
+  them for a read-only display.
+
+The implemented `pwr`, `info N`, `stat N`, and `bat N` set therefore covers
+the useful live, identity, lifetime, and per-cell telemetry without changing
+console privilege level or battery state. Captures and field names were
+cross-checked against the
+[Pylontech Console protocol project](https://github.com/Hrabovszki1023/pylontech-console),
+[pylontech-rs232-venus](https://github.com/tejno/pylontech-rs232-venus), and
+[ioBroker.pylontech](https://github.com/PLCHome/ioBroker.pylontech).
 
 ## Configuration
 
@@ -51,9 +107,15 @@ Review and update the following settings:
 
 - `serial.port` — usually `/dev/ttyUSB0`; serial-starter overrides this value
   with the TTY selected by Venus OS;
+- `serial.command_delay` — minimum spacing between console commands; the
+  default 1.2 seconds is intentionally conservative for slave modules;
 - `battery.expected_modules` — the actual number of modules; setting it to `0`
   enables automatic discovery but cannot protect against a partial response;
 - `battery.module_capacity_ah` — the capacity of one module, or `0` if unknown;
+- `battery.max_cells_per_module` — the maximum number of D-Bus cell paths to
+  reserve for each module;
+- `driver.details_poll_interval` — interval for `info`, `stat`, and `bat`
+  queries; use `0` to disable detailed polling;
 - `driver.device_instance` — a unique device instance in the Victron system.
 
 ## Initial test on a GX device
@@ -65,6 +127,17 @@ prints the result. Run it before installing or starting the D-Bus service:
 ```sh
 python3 probe.py --port /dev/ttyUSB0 --expected-modules 4
 ```
+
+To safely inspect serial numbers, cycles, SOH, and cell data without creating
+or accessing any D-Bus service, run:
+
+```sh
+python3 probe.py --port /dev/ttyUSB0 --expected-modules 4 --details
+```
+
+The detailed probe also handles firmware pagination prompts such as
+`[enter]` and `--more--`. If a slow stack still omits detail fields, retry with
+`--command-delay 2.0` and a larger `--timeout`.
 
 To capture the original console response for troubleshooting, use:
 
@@ -89,10 +162,28 @@ python3 main.py --config config.ini
 Verify the published values on Venus OS:
 
 ```sh
-dbus -y com.victronenergy.pylontechmonitor.rs232 /Soc GetValue
-dbus -y com.victronenergy.pylontechmonitor.rs232 /Dc/0/Voltage GetValue
-dbus -y com.victronenergy.pylontechmonitor.rs232 /System/NrOfModulesOnline GetValue
+dbus -y com.victronenergy.unsupported.pylontechmonitor_rs232 /Soc GetValue
+dbus -y com.victronenergy.unsupported.pylontechmonitor_rs232 /Dc/0/Voltage GetValue
+dbus -y com.victronenergy.unsupported.pylontechmonitor_rs232 /Modules/1/Cycles GetValue
+dbus -y com.victronenergy.unsupported.pylontechmonitor_rs232 /Modules/1/Serial GetValue
 ```
+
+## Device List and GUI v2
+
+The service uses the built-in `unsupported` device type so that it appears in
+Settings -> Device List without masquerading as a Victron battery. The generic
+page always shows a live bank summary through `/Reason` and provides the normal
+Device info page.
+
+The installer also enables the bundled GUI v2 plugin. It adds a `Pylontech
+battery data` page containing bank values, module pages, cycles, serial
+numbers, firmware and hardware identity, SOH, lifetime counters, voltage
+spread, temperatures, and detailed cell pages. The bundled plugin
+requires GUI v2 1.2.13 or newer. On older Venus OS releases or when a browser
+Remote Console cannot load filesystem plugins, the generic device entry still
+works; update Venus OS or use the local GUI to obtain the full custom page.
+After updating an existing installation, run the installer again so it copies
+the plugin bundle and refreshes `/data/apps/enabled/dbus-pylontech-console`.
 
 ## Production installation with Venus OS serial-starter
 
@@ -134,6 +225,9 @@ vi /data/apps/dbus-pylontech-console/config.ini
 ```
 
 Set `battery.expected_modules` to the number confirmed by `probe.py`. The
+installer migrates the previous `com.victronenergy.pylontechmonitor.*` default
+to the Device List-safe `com.victronenergy.unsupported.pylontechmonitor_*`
+namespace while preserving the suffix. The
 installer reloads serial-starter and re-enables only the selected TTY. If the
 service does not appear, unplug and reconnect the selected USB adapter, or
 reboot the GX device. Check the serial-starter service and its log with:

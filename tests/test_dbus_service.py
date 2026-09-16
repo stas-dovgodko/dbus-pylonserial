@@ -3,9 +3,16 @@ import sys
 import tempfile
 import types
 import unittest
+from dataclasses import replace
 
 from pylontech_dbus.config import load_config
 from pylontech_dbus.dbus_service import PylontechDbusService
+from pylontech_dbus.models import (
+    BankReading,
+    CellReading,
+    ModuleMetadata,
+    ModuleStatistics,
+)
 from pylontech_dbus.parser import parse_pwr_response
 
 from tests.test_parser import PWR_RESPONSE
@@ -40,11 +47,13 @@ port=/dev/ttyUSB0
 expected_modules=4
 module_capacity_ah=100
 max_modules=4
+max_cells_per_module=16
 [driver]
 poll_interval=5
+details_poll_interval=60
 failure_threshold=3
 device_instance=288
-service_name=com.victronenergy.pylontechmonitor.rs232
+service_name=com.victronenergy.unsupported.pylontechmonitor_rs232
 """
         with tempfile.NamedTemporaryFile("w", delete=False) as handle:
             handle.write(content)
@@ -61,6 +70,49 @@ service_name=com.victronenergy.pylontechmonitor.rs232
         config = load_config(self.path)
         service = PylontechDbusService(config)
         reading = parse_pwr_response(PWR_RESPONSE, expected_modules=4)
+        detailed_module = replace(
+            reading.modules[0],
+            metadata=ModuleMetadata(
+                address=1,
+                manufacturer="Pylon",
+                model="US2000C",
+                main_firmware_version="B67.5.0",
+                serial_number="HPTCR03170C09377",
+                specification="48V/50AH",
+                cell_count=15,
+                max_charge_current=90.0,
+                console_port_rate=115200,
+            ),
+            statistics=ModuleStatistics(
+                address=1,
+                cycles=666,
+                soh=93,
+                soc=94,
+                raw_counters={
+                    "cycle times": 666,
+                    "pwr coulomb": 158824440,
+                    "lifealarm times": 0,
+                },
+            ),
+            cells=(
+                CellReading(
+                    number=1,
+                    voltage=3.316,
+                    current=-2.964,
+                    temperature=26.4,
+                    soc=96,
+                    remaining_capacity_ah=44.628,
+                    balancing=True,
+                    base_state="Dischg",
+                    voltage_state="Normal",
+                    current_state="Normal",
+                    temperature_state="Normal",
+                ),
+            ),
+        )
+        reading = BankReading.from_modules(
+            (detailed_module,) + reading.modules[1:]
+        )
 
         service.publish(reading)
         values = service._service.values
@@ -70,6 +122,18 @@ service_name=com.victronenergy.pylontechmonitor.rs232
         self.assertEqual(400.0, values["/InstalledCapacity"])
         self.assertEqual(274.0, values["/Capacity"])
         self.assertEqual(1, values["/Modules/4/Online"])
+        self.assertEqual(0xF0A1, values["/ProductId"])
+        self.assertIn("4/4 modules", values["/Reason"])
+        self.assertEqual(666, values["/Modules/1/Cycles"])
+        self.assertEqual("HPTCR03170C09377", values["/Modules/1/Serial"])
+        self.assertEqual(90.0, values["/Modules/1/MaxChargeCurrent"])
+        self.assertEqual(115200, values["/Modules/1/ConsolePortRate"])
+        self.assertEqual(
+            158824440,
+            values["/Modules/1/Statistics/PowerCoulombRaw"],
+        )
+        self.assertEqual(3.316, values["/Modules/1/Cells/1/Voltage"])
+        self.assertEqual(1, values["/Modules/1/Cells/1/Balancing"])
         self.assertFalse(any(path.startswith("/Info/") for path in values))
 
         service.disconnect()

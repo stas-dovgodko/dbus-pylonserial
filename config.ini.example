@@ -3,6 +3,8 @@
 port = /dev/ttyUSB0
 baudrate = 115200
 timeout = 5
+# Minimum pause between console commands. Slave modules often need 1.2 seconds.
+command_delay = 1.2
 
 [battery]
 # Use 0 for discovery. Set the real count to reject partial responses.
@@ -12,11 +14,15 @@ module_capacity_ah = 0
 custom_name = Pylontech RS232
 # Reserve custom D-Bus paths for this many modules.
 max_modules = 16
+# Maximum number of cell paths reserved for each module.
+max_cells_per_module = 16
 
 [driver]
 poll_interval = 5
+# Read info/stat/bat details less frequently than the live pwr summary.
+details_poll_interval = 60
 failure_threshold = 3
 device_instance = 288
-# This isolated namespace is intentionally not a Victron battery service.
-service_name = com.victronenergy.pylontechmonitor.rs232
+# The unsupported service type is visible in Devices but ignored as a battery.
+service_name = com.victronenergy.unsupported.pylontechmonitor_rs232
 log_level = INFO

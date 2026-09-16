@@ -9,6 +9,7 @@ import logging
 import os
 import signal
 import sys
+import time
 from dataclasses import replace
 
 from pylontech_dbus.config import DriverConfig, load_config
@@ -49,6 +50,7 @@ def _console(config: DriverConfig) -> PylontechConsole:
         port=config.serial.port,
         baudrate=config.serial.baudrate,
         timeout=config.serial.timeout,
+        command_delay=config.serial.command_delay,
         expected_modules=config.battery.expected_modules,
     )
 
@@ -60,7 +62,9 @@ def _override_serial_port(config: DriverConfig, port: str) -> DriverConfig:
 def _probe(config: DriverConfig) -> int:
     console = _console(config)
     try:
-        reading = console.read_bank()
+        reading = console.read_bank(
+            include_details=config.details_poll_interval > 0
+        )
         print(json.dumps(reading.as_dict(), indent=2, sort_keys=True))
         return 0
     finally:
@@ -88,6 +92,7 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
     mainloop = GLib.MainLoop()
     failures = 0
     exit_code = 0
+    next_details_poll = 0.0
 
     def publish(reading):
         service.publish(reading)
@@ -100,9 +105,15 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
         )
 
     def poll():
-        nonlocal exit_code, failures
+        nonlocal exit_code, failures, next_details_poll
         try:
-            reading = console.read_bank()
+            include_details = (
+                config.details_poll_interval > 0
+                and time.monotonic() >= next_details_poll
+            )
+            reading = console.read_bank(include_details=include_details)
+            if include_details:
+                next_details_poll = time.monotonic() + config.details_poll_interval
             publish(reading)
             failures = 0
         except Exception:

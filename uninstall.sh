@@ -8,6 +8,7 @@ TEMPLATE_SOURCE="$APP_DIR/serial-starter/service"
 RULE_LINK="/etc/udev/rules.d/zz-dbus-pylonserial.rules"
 RULE_SOURCE="$APP_DIR/udev/zz-dbus-pylonserial.rules"
 SERIAL_STARTER_CONF="/data/conf/serial-starter.d/dbus-pylonserial.conf"
+GUI_APP_LINK="/data/apps/enabled/dbus-pylontech-console"
 RC_LOCAL="/data/rc.local"
 DIRECT_HOOK="ln -sfn $APP_DIR/service $DIRECT_SERVICE_LINK"
 SERIAL_STARTER_HOOK="sh $APP_DIR/restore-serial-starter.sh"
@@ -59,6 +60,7 @@ fi
 
 remove_owned_link "$TEMPLATE_LINK" "$TEMPLATE_SOURCE"
 remove_owned_link "$RULE_LINK" "$RULE_SOURCE"
+remove_owned_link "$GUI_APP_LINK" "$APP_DIR"
 
 if [ -f "$RC_LOCAL" ]; then
     temporary="$RC_LOCAL.tmp.$$"

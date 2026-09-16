@@ -50,11 +50,12 @@ class SerialStarterTest(unittest.TestCase):
     def test_serial_port_override_does_not_change_other_settings(self):
         config = DriverConfig(
             serial=SerialConfig("/dev/ttyUSB0", 115200, 5.0),
-            battery=BatteryConfig(5, 0.0, "Pylontech RS232", 16),
+            battery=BatteryConfig(5, 0.0, "Pylontech RS232", 16, 16),
             poll_interval=5.0,
+            details_poll_interval=60.0,
             failure_threshold=3,
             device_instance=288,
-            service_name="com.victronenergy.pylontechmonitor.rs232",
+            service_name="com.victronenergy.unsupported.pylontechmonitor_rs232",
             log_level="INFO",
         )
 
@@ -67,11 +68,12 @@ class SerialStarterTest(unittest.TestCase):
     def test_detection_failure_exits_before_dbus_start(self):
         config = DriverConfig(
             serial=SerialConfig("/dev/ttyUSB0", 115200, 5.0),
-            battery=BatteryConfig(5, 0.0, "Pylontech RS232", 16),
+            battery=BatteryConfig(5, 0.0, "Pylontech RS232", 16, 16),
             poll_interval=5.0,
+            details_poll_interval=60.0,
             failure_threshold=3,
             device_instance=288,
-            service_name="com.victronenergy.pylontechmonitor.rs232",
+            service_name="com.victronenergy.unsupported.pylontechmonitor_rs232",
             log_level="INFO",
         )
 
@@ -79,7 +81,7 @@ class SerialStarterTest(unittest.TestCase):
             def __init__(self):
                 self.closed = False
 
-            def read_bank(self):
+            def read_bank(self, include_details=False):
                 raise TimeoutError("not a Pylontech console")
 
             def close(self):

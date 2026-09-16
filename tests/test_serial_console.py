@@ -35,6 +35,18 @@ class FakeSerial:
         self.is_open = False
 
 
+class PagedFakeSerial(FakeSerial):
+    def __init__(self):
+        super().__init__(b"first page\r\n--more--")
+        self.next_page = b"\r\nsecond page\r\npylon>"
+
+    def write(self, data):
+        super().write(data)
+        if data == b"\n" and self.next_page:
+            self.response.extend(self.next_page)
+            self.next_page = b""
+
+
 class SerialConsoleSafetyTest(unittest.TestCase):
     def test_refuses_port_already_used_by_another_process(self):
         console = PylontechConsole("/dev/ttyUSB0")
@@ -51,6 +63,26 @@ class SerialConsoleSafetyTest(unittest.TestCase):
 
         self.assertEqual(b"Power Volt\r\npylon>", console.read_pwr_response())
         self.assertEqual([b"pwr\n"], serial.writes)
+
+    def test_rejects_commands_outside_read_only_allowlist(self):
+        serial = FakeSerial(b"pylon>")
+        console = PylontechConsole("/dev/ttyUSB0", serial_connection=serial)
+
+        with self.assertRaisesRegex(ValueError, "read-only allowlist"):
+            console.execute_read_only("config")
+
+        self.assertEqual([], serial.writes)
+
+    def test_continues_paginated_read_only_response(self):
+        serial = PagedFakeSerial()
+        console = PylontechConsole(
+            "/dev/ttyUSB0", command_delay=0, serial_connection=serial
+        )
+
+        response = console.execute_read_only("info 1")
+
+        self.assertIn(b"second page", response)
+        self.assertEqual([b"info 1\n", b"\n"], serial.writes)
 
 
 if __name__ == "__main__":

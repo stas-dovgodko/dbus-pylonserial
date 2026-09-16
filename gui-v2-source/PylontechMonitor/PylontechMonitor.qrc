@@ -1,0 +1,5 @@
+<RCC>
+<qresource prefix="/PylontechMonitor">
+<file>PylontechMonitor.qml</file>
+</qresource>
+</RCC>
