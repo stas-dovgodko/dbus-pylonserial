@@ -92,7 +92,11 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
     executor = ThreadPoolExecutor(max_workers=1)
     failures = 0
     exit_code = 0
-    next_details_poll = 0.0
+    next_details_poll = (
+        time.monotonic() + config.details_poll_interval
+        if config.details_poll_interval > 0
+        else 0.0
+    )
     poll_in_flight = False
     stopping = False
 
