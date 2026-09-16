@@ -237,11 +237,13 @@ svstat /service/dbus-pylonserial.ttyUSB0
 tail -F /data/log/dbus-pylonserial.ttyUSB0/current | tai64nlocal
 ```
 
-The template starts the driver with the TTY supplied by serial-starter. Before
-publishing anything on D-Bus, the driver must receive and parse a valid `pwr`
-response. If detection fails, it exits so serial-starter can recover normally.
-If an established connection repeatedly fails, it also exits and lets
-serial-starter restart device detection.
+The template starts the driver with the TTY supplied by serial-starter. The
+read-only D-Bus device is registered immediately and initially reports
+`/Connected = 0`; this makes the device visible while the adapter is being
+probed. The driver publishes battery values only after receiving and parsing a
+valid `pwr` response. If detection fails, it exits so serial-starter can
+recover normally. If an established connection repeatedly fails, it marks the
+device disconnected and exits so serial-starter can restart device detection.
 
 Files under `/data` survive Venus OS updates. The installer adds an idempotent
 `/data/rc.local` hook that restores the service-template and udev-rule symlinks.

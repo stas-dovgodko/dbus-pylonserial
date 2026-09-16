@@ -81,6 +81,11 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
 
     DBusGMainLoop(set_as_default=True)
     service = PylontechDbusService(config)
+    LOGGER.info(
+        "D-Bus service %s registered; probing %s",
+        config.service_name,
+        config.serial.port,
+    )
     console = _console(config)
     initial_reading = None
     if serial_starter:
