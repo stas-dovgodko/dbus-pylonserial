@@ -65,6 +65,29 @@ remove_rc_hook() {
     mv "$temporary" "$RC_LOCAL"
 }
 
+run_tty_helper() {
+    helper=$1
+    if command -v timeout >/dev/null 2>&1; then
+        timeout 15 "$helper" "$DEVICE_NAME"
+        return $?
+    fi
+
+    # BusyBox images without timeout still get a bounded wait.
+    "$helper" "$DEVICE_NAME" &
+    helper_pid=$!
+    elapsed=0
+    while kill -0 "$helper_pid" 2>/dev/null; do
+        if [ "$elapsed" -ge 15 ]; then
+            kill "$helper_pid" 2>/dev/null || true
+            wait "$helper_pid" 2>/dev/null || true
+            return 124
+        fi
+        sleep 1
+        elapsed=$((elapsed + 1))
+    done
+    wait "$helper_pid"
+}
+
 read_udev_property() {
     property=$1
     printf '%s\n' "$UDEV_PROPERTIES" | sed -n "s/^$property=//p" | head -n 1
@@ -217,7 +240,9 @@ if [ -n "$SERIAL_STARTER_DEVICE" ]; then
     "$APP_DIR/restore-serial-starter.sh"
     if [ -x /opt/victronenergy/serial-starter/stop-tty.sh ]; then
         # Venus OS releases differ here; the helper universally accepts the tty name.
-        /opt/victronenergy/serial-starter/stop-tty.sh "$DEVICE_NAME"
+        if ! run_tty_helper /opt/victronenergy/serial-starter/stop-tty.sh; then
+            echo "Warning: stop-tty.sh did not finish; continuing with serial-starter reload." >&2
+        fi
     fi
     rm -f "/data/var/lib/serial-starter/$DEVICE_NAME"
     if [ -d /service/serial-starter ]; then
@@ -225,7 +250,9 @@ if [ -n "$SERIAL_STARTER_DEVICE" ]; then
         sleep 2
     fi
     if [ -x /opt/victronenergy/serial-starter/start-tty.sh ]; then
-        /opt/victronenergy/serial-starter/start-tty.sh "$DEVICE_NAME"
+        if ! run_tty_helper /opt/victronenergy/serial-starter/start-tty.sh; then
+            echo "Warning: start-tty.sh did not finish; udev trigger will continue activation." >&2
+        fi
     fi
     if udevadm trigger --help 2>&1 | grep -q -- '--sysname-match'; then
         udevadm trigger --action=add --sysname-match="$DEVICE_NAME"
