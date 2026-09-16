@@ -244,6 +244,16 @@ if [ -n "$SERIAL_STARTER_DEVICE" ]; then
             echo "Warning: stop-tty.sh did not finish; continuing with serial-starter reload." >&2
         fi
     fi
+    # A previous probe (for example dbus-cgwacs) can remain supervised for this
+    # TTY when udev classification changes. Stop only services attached to the
+    # selected device so the Pylontech service can acquire the port.
+    for stale_service in /service/*."$DEVICE_NAME"; do
+        [ -e "$stale_service" ] || continue
+        case "$stale_service" in
+            "/service/dbus-pylonserial.$DEVICE_NAME") continue ;;
+        esac
+        svc -d "$stale_service" 2>/dev/null || true
+    done
     rm -f "/data/var/lib/serial-starter/$DEVICE_NAME"
     if [ -d /service/serial-starter ]; then
         svc -t /service/serial-starter
