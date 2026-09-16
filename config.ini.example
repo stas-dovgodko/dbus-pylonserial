@@ -1,0 +1,22 @@
+[serial]
+# Pylontech console cable connected to the master battery.
+port = /dev/ttyUSB0
+baudrate = 115200
+timeout = 5
+
+[battery]
+# Use 0 for discovery. Set the real count to reject partial responses.
+expected_modules = 0
+# Used only for InstalledCapacity and remaining Capacity. Use 0 if unknown.
+module_capacity_ah = 0
+custom_name = Pylontech RS232
+# Reserve custom D-Bus paths for this many modules.
+max_modules = 16
+
+[driver]
+poll_interval = 5
+failure_threshold = 3
+device_instance = 288
+# This isolated namespace is intentionally not a Victron battery service.
+service_name = com.victronenergy.pylontechmonitor.rs232
+log_level = INFO

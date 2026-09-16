@@ -1,0 +1,13 @@
+This project is based on the Pylontech/Pytes console parsing approach used by
+pytes_serial:
+
+    https://github.com/chinezbrun/pytes_serial
+
+pytes_serial is licensed under the GNU Affero General Public License v3.0.
+This project is distributed under the same license, AGPL-3.0-only.
+
+Victron D-Bus path conventions and VeDbusService usage are based on public
+Victron Energy documentation and velib_python examples:
+
+    https://github.com/victronenergy/venus/wiki/dbus-api
+    https://github.com/victronenergy/velib_python
