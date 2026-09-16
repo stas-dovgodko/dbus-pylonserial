@@ -72,16 +72,8 @@ def _probe(config: DriverConfig) -> int:
 
 
 def _run(config: DriverConfig, serial_starter: bool = False) -> int:
-    console = _console(config)
-    initial_reading = None
-    if serial_starter:
-        try:
-            initial_reading = console.read_bank()
-        except Exception:
-            LOGGER.exception("Pylontech detection failed on %s", config.serial.port)
-            console.close()
-            return 1
-
+    # Register the D-Bus object before probing the serial adapter. A slow or
+    # temporarily unavailable adapter must not hide the device from Venus OS.
     from dbus.mainloop.glib import DBusGMainLoop
     from gi.repository import GLib
 
@@ -89,6 +81,16 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
 
     DBusGMainLoop(set_as_default=True)
     service = PylontechDbusService(config)
+    console = _console(config)
+    initial_reading = None
+    if serial_starter:
+        try:
+            initial_reading = console.read_bank()
+        except Exception:
+            LOGGER.exception("Pylontech detection failed on %s", config.serial.port)
+            service.disconnect()
+            console.close()
+            return 1
     mainloop = GLib.MainLoop()
     failures = 0
     exit_code = 0
