@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import json
 import logging
 import os
@@ -86,20 +87,14 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
         config.service_name,
         config.serial.port,
     )
-    console = _console(config)
-    initial_reading = None
-    if serial_starter:
-        try:
-            initial_reading = console.read_bank()
-        except Exception:
-            LOGGER.exception("Pylontech detection failed on %s", config.serial.port)
-            service.disconnect()
-            console.close()
-            return 1
     mainloop = GLib.MainLoop()
+    console = _console(config)
+    executor = ThreadPoolExecutor(max_workers=1)
     failures = 0
     exit_code = 0
     next_details_poll = 0.0
+    poll_in_flight = False
+    stopping = False
 
     def publish(reading):
         service.publish(reading)
@@ -111,14 +106,14 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
             reading.soc,
         )
 
-    def poll():
-        nonlocal exit_code, failures, next_details_poll
+    def read_bank(include_details):
+        return include_details, console.read_bank(include_details=include_details)
+
+    def complete(future):
+        nonlocal exit_code, failures, next_details_poll, poll_in_flight
+        poll_in_flight = False
         try:
-            include_details = (
-                config.details_poll_interval > 0
-                and time.monotonic() >= next_details_poll
-            )
-            reading = console.read_bank(include_details=include_details)
+            include_details, reading = future.result()
             if include_details:
                 next_details_poll = time.monotonic() + config.details_poll_interval
             publish(reading)
@@ -135,28 +130,41 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
                     exit_code = 1
                     mainloop.quit()
                     return False
+        return False
+
+    def poll():
+        nonlocal poll_in_flight, next_details_poll
+        if stopping or poll_in_flight:
+            return True
+        include_details = (
+            config.details_poll_interval > 0
+            and time.monotonic() >= next_details_poll
+        )
+        if include_details:
+            next_details_poll = time.monotonic() + config.details_poll_interval
+        poll_in_flight = True
+        future = executor.submit(read_bank, include_details)
+        future.add_done_callback(
+            lambda completed: GLib.idle_add(complete, completed)
+        )
         return True
 
     def stop(_signum, _frame):
+        nonlocal stopping
+        if stopping:
+            return
+        stopping = True
         LOGGER.info("Stopping")
         console.close()
         mainloop.quit()
 
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
-    if initial_reading is not None:
-        publish(initial_reading)
-        if config.details_poll_interval > 0:
-            # Keep the D-Bus main loop responsive while the initial live data
-            # remains available; collect detail data on the regular interval.
-            next_details_poll = (
-                time.monotonic() + config.details_poll_interval
-            )
-    else:
-        poll()
+    GLib.timeout_add(0, poll)
     GLib.timeout_add(int(config.poll_interval * 1000), poll)
     LOGGER.info("D-Bus service %s started", config.service_name)
     mainloop.run()
+    executor.shutdown(wait=True)
     return exit_code
 
 
