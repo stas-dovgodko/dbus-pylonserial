@@ -49,7 +49,8 @@ cp config.ini.example config.ini
 
 Review and update the following settings:
 
-- `serial.port` — usually `/dev/ttyUSB0`;
+- `serial.port` — usually `/dev/ttyUSB0`; serial-starter overrides this value
+  with the TTY selected by Venus OS;
 - `battery.expected_modules` — the actual number of modules; setting it to `0`
   enables automatic discovery but cannot protect against a partial response;
 - `battery.module_capacity_ah` — the capacity of one module, or `0` if unknown;
@@ -93,30 +94,92 @@ dbus -y com.victronenergy.pylontechmonitor.rs232 /Dc/0/Voltage GetValue
 dbus -y com.victronenergy.pylontechmonitor.rs232 /System/NrOfModulesOnline GetValue
 ```
 
-## Installation under `/data`
+## Production installation with Venus OS serial-starter
 
-Copy the repository to the GX device and run the installer as root:
+Venus OS normally probes unclassified USB serial adapters with several drivers.
+This can make `dbus-cgwacs` temporarily open a Pylontech console cable even
+when no energy meter is installed. The production installer registers a
+dedicated `pylonserial` device class so that only this driver opens the selected
+adapter.
+
+Copy the repository to the GX device and run the installer as root, passing the
+currently assigned device path:
 
 ```sh
-chmod +x install.sh service/run
+chmod +x install.sh restore-serial-starter.sh \
+    serial-starter/service/run serial-starter/service/log/run
+./install.sh --serial-starter /dev/ttyUSB0
+```
+
+The installer determines how to identify the adapter without embedding
+device-specific values in this project:
+
+1. `ID_SERIAL_SHORT` is preferred when the adapter provides a unique serial
+   number. The adapter can then move between USB sockets.
+2. `ID_PATH` is used when the adapter has no unique serial number. In that case,
+   the physical USB socket becomes the stable identity.
+3. Installation stops if neither property is available. It never creates a
+   broad `ID_MODEL` rule that could capture unrelated adapters.
+
+The generated udev rule is stored under
+`/data/apps/dbus-pylontech-console/udev`, and the serial-starter registration is
+stored in `/data/conf/serial-starter.d/dbus-pylonserial.conf`. The installer
+does not modify the global `rs485` or `default` probe lists, so no other serial
+adapter receives a Pylontech query.
+
+Review the persistent configuration before reconnecting the cable:
+
+```sh
+vi /data/apps/dbus-pylontech-console/config.ini
+```
+
+Set `battery.expected_modules` to the number confirmed by `probe.py`. Then
+unplug and reconnect the selected USB adapter, or reboot the GX device. Check
+the serial-starter service and its log with:
+
+```sh
+svstat /service/dbus-pylonserial.ttyUSB0
+tail -F /data/log/dbus-pylonserial.ttyUSB0/current | tai64nlocal
+```
+
+The template starts the driver with the TTY supplied by serial-starter. Before
+publishing anything on D-Bus, the driver must receive and parse a valid `pwr`
+response. If detection fails, it exits so serial-starter can recover normally.
+If an established connection repeatedly fails, it also exits and lets
+serial-starter restart device detection.
+
+Files under `/data` survive Venus OS updates. The installer adds an idempotent
+`/data/rc.local` hook that restores the service-template and udev-rule symlinks.
+The integration should still be verified after a major Venus OS update.
+
+To disable the integration and return the adapter to normal Venus OS probing:
+
+```sh
+/data/apps/dbus-pylontech-console/uninstall.sh
+```
+
+The uninstaller removes only this project's registration and owned symlinks.
+It preserves the application directory and `config.ini`, and refuses to remove
+foreign files found at the expected paths. Reconnect the adapter or reboot
+afterward.
+
+## Standalone service installation
+
+For development without serial-starter, run:
+
+```sh
 ./install.sh
 ```
 
-The installer copies the driver to `/data/apps/dbus-pylontech-console`, creates
-`config.ini`, installs a runit service, and adds an idempotent hook to
-`/data/rc.local`. Files under `/data` survive Venus OS updates, but the
-modification should still be verified after major updates. On the first
-installation, the service remains disabled so that it cannot claim the serial
-port before the configuration has been reviewed.
-
-After editing the configuration, start the service for the first time:
+This creates a disabled standalone service. After reviewing its configuration,
+start it explicitly:
 
 ```sh
 rm /data/apps/dbus-pylontech-console/service/down
 svc -u /service/dbus-pylontech-console
 ```
 
-For subsequent restarts and status checks, use:
+For subsequent standalone restarts and status checks, use:
 
 ```sh
 svc -t /service/dbus-pylontech-console

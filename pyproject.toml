@@ -1,6 +1,6 @@
 [project]
 name = "dbus-pylontech-console"
-version = "0.1.0"
+version = "0.2.0"
 description = "Isolated Pylontech RS232 telemetry service for Victron Venus OS"
 requires-python = ">=3.8"
 license = {text = "AGPL-3.0-only"}

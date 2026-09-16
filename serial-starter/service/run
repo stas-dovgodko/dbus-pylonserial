@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+APP_DIR="/data/apps/dbus-pylontech-console"
+export PYTHONPATH="/opt/victronenergy/dbus-systemcalc-py/ext/velib_python${PYTHONPATH:+:$PYTHONPATH}"
+
+exec 2>&1
+exec /usr/bin/python3 -u "$APP_DIR/main.py" \
+    --config "$APP_DIR/config.ini" \
+    --serial-port /dev/TTY \
+    --serial-starter
