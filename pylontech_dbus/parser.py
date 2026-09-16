@@ -87,6 +87,8 @@ def parse_pwr_response(
         values = line.split()
         if not values or not values[0].isdigit():
             continue
+        if any(value.lower() == "absent" for value in values[1:]):
+            continue
         if len(values) <= highest_index:
             raise PwrParseError("Incomplete pwr row: {!r}".format(line))
 
@@ -100,8 +102,6 @@ def parse_pwr_response(
         seen.add(number)
 
         base_state = values[indexes["base_state"]]
-        if base_state.lower() == "absent":
-            continue
 
         try:
             soc = float(values[indexes["soc"]].rstrip("%"))
