@@ -146,6 +146,12 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
     signal.signal(signal.SIGINT, stop)
     if initial_reading is not None:
         publish(initial_reading)
+        if config.details_poll_interval > 0:
+            # Keep the D-Bus main loop responsive while the initial live data
+            # remains available; collect detail data on the regular interval.
+            next_details_poll = (
+                time.monotonic() + config.details_poll_interval
+            )
     else:
         poll()
     GLib.timeout_add(int(config.poll_interval * 1000), poll)
