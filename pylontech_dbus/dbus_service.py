@@ -98,6 +98,19 @@ class PylontechDbusService:
     def __init__(self, config: DriverConfig, bus=None) -> None:
         VeDbusService = _load_vedbus()
         self.config = config
+        if bus is None:
+            # Venus services must publish on the system bus. velib_python
+            # otherwise prefers SessionBus when DBUS_SESSION_BUS_ADDRESS is set.
+            try:
+                import dbus
+            except ImportError:
+                pass
+            else:
+                try:
+                    bus = dbus.SystemBus()
+                except Exception:
+                    # Offline test environments may not have a running system bus.
+                    pass
         self._service = VeDbusService(config.service_name, bus=bus, register=False)
         self._last_module_count = 0
         self._setup_paths()
