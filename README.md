@@ -133,9 +133,10 @@ Review the persistent configuration before reconnecting the cable:
 vi /data/apps/dbus-pylontech-console/config.ini
 ```
 
-Set `battery.expected_modules` to the number confirmed by `probe.py`. Then
-unplug and reconnect the selected USB adapter, or reboot the GX device. Check
-the serial-starter service and its log with:
+Set `battery.expected_modules` to the number confirmed by `probe.py`. The
+installer reloads serial-starter and re-enables only the selected TTY. If the
+service does not appear, unplug and reconnect the selected USB adapter, or
+reboot the GX device. Check the serial-starter service and its log with:
 
 ```sh
 svstat /service/dbus-pylonserial.ttyUSB0

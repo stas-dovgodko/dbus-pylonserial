@@ -171,10 +171,22 @@ if [ -n "$SERIAL_STARTER_DEVICE" ]; then
         /opt/victronenergy/serial-starter/stop-tty.sh "$DEVICE_NAME"
     fi
     rm -f "/data/var/lib/serial-starter/$DEVICE_NAME"
+    if udevadm trigger --help 2>&1 | grep -q -- '--sysname-match'; then
+        udevadm trigger --action=add --sysname-match="$DEVICE_NAME"
+    else
+        udevadm trigger --action=add --subsystem-match=tty
+    fi
+    if [ -d /service/serial-starter ]; then
+        svc -t /service/serial-starter
+        sleep 2
+    fi
+    if [ -x /opt/victronenergy/serial-starter/start-tty.sh ]; then
+        /opt/victronenergy/serial-starter/start-tty.sh "$DEVICE_NAME"
+    fi
 
     echo "Installed serial-starter integration for $MATCH_DESCRIPTION"
-    echo "Edit $APP_DIR/config.ini, then unplug and reconnect $SERIAL_STARTER_DEVICE."
-    echo "A reboot also applies the new udev classification."
+    echo "Edit $APP_DIR/config.ini, then check /service/dbus-pylonserial.$DEVICE_NAME."
+    echo "Reconnect the adapter or reboot if the service does not appear."
 else
     if [ -f "$SERIAL_STARTER_CONF" ]; then
         echo "Serial-starter integration is already installed." >&2

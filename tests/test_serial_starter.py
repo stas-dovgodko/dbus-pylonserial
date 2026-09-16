@@ -35,6 +35,14 @@ class SerialStarterTest(unittest.TestCase):
         self.assertNotIn('ENV{ID_MODEL}==', installer)
         self.assertNotIn('rm -rf /data/var/lib/serial-starter', installer)
 
+        stop_position = installer.index("stop-tty.sh")
+        cache_position = installer.index('rm -f "/data/var/lib/serial-starter/$DEVICE_NAME"')
+        restart_position = installer.index("svc -t /service/serial-starter")
+        start_position = installer.index("start-tty.sh")
+        self.assertLess(stop_position, cache_position)
+        self.assertLess(cache_position, restart_position)
+        self.assertLess(restart_position, start_position)
+
     def test_serial_port_override_does_not_change_other_settings(self):
         config = DriverConfig(
             serial=SerialConfig("/dev/ttyUSB0", 115200, 5.0),
