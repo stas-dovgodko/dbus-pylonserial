@@ -44,8 +44,8 @@ class SerialStarterTest(unittest.TestCase):
         self.assertLess(cache_position, restart_position)
         self.assertLess(restart_position, start_position)
         self.assertLess(start_position, trigger_position)
-        self.assertIn('stop-tty.sh "$RESOLVED_DEVICE"', installer)
-        self.assertIn('start-tty.sh "$RESOLVED_DEVICE"', installer)
+        self.assertIn('stop-tty.sh "$DEVICE_NAME"', installer)
+        self.assertIn('start-tty.sh "$DEVICE_NAME"', installer)
 
     def test_serial_port_override_does_not_change_other_settings(self):
         config = DriverConfig(

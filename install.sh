@@ -216,7 +216,8 @@ if [ -n "$SERIAL_STARTER_DEVICE" ]; then
     chmod 755 "$RC_LOCAL"
     "$APP_DIR/restore-serial-starter.sh"
     if [ -x /opt/victronenergy/serial-starter/stop-tty.sh ]; then
-        /opt/victronenergy/serial-starter/stop-tty.sh "$RESOLVED_DEVICE"
+        # Venus OS releases differ here; the helper universally accepts the tty name.
+        /opt/victronenergy/serial-starter/stop-tty.sh "$DEVICE_NAME"
     fi
     rm -f "/data/var/lib/serial-starter/$DEVICE_NAME"
     if [ -d /service/serial-starter ]; then
@@ -224,7 +225,7 @@ if [ -n "$SERIAL_STARTER_DEVICE" ]; then
         sleep 2
     fi
     if [ -x /opt/victronenergy/serial-starter/start-tty.sh ]; then
-        /opt/victronenergy/serial-starter/start-tty.sh "$RESOLVED_DEVICE"
+        /opt/victronenergy/serial-starter/start-tty.sh "$DEVICE_NAME"
     fi
     if udevadm trigger --help 2>&1 | grep -q -- '--sysname-match'; then
         udevadm trigger --action=add --sysname-match="$DEVICE_NAME"
