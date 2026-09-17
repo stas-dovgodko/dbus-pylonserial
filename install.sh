@@ -88,6 +88,22 @@ run_tty_helper() {
     wait "$helper_pid"
 }
 
+remove_runtime_pylon_service() {
+    service="/service/dbus-pylonserial.$DEVICE_NAME"
+    [ -e "$service" ] || return 0
+    svc -d "$service" 2>/dev/null || true
+    runtime_dir=$(readlink -f "$service" 2>/dev/null || true)
+    # serial-starter keeps generated services on the writable runtime tree.
+    # Remove only this exact generated service so the refreshed template is
+    # copied and TTY substitution is applied on the next discovery.
+    case "$runtime_dir" in
+        /run/*)
+            rm -rf "$runtime_dir"
+            rm -f "$service"
+            ;;
+    esac
+}
+
 read_udev_property() {
     property=$1
     printf '%s\n' "$UDEV_PROPERTIES" | sed -n "s/^$property=//p" | head -n 1
@@ -254,6 +270,7 @@ if [ -n "$SERIAL_STARTER_DEVICE" ]; then
         esac
         svc -d "$stale_service" 2>/dev/null || true
     done
+    remove_runtime_pylon_service
     rm -f "/data/var/lib/serial-starter/$DEVICE_NAME"
     if [ -d /service/serial-starter ]; then
         svc -t /service/serial-starter
