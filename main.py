@@ -97,8 +97,11 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
     executor = ThreadPoolExecutor(max_workers=1)
     failures = 0
     exit_code = 0
+    # Publish the first live pwr sample immediately, then enrich it with SOH,
+    # model and cell details on the next polling cycle instead of waiting the
+    # full details interval after every restart.
     next_details_poll = (
-        time.monotonic() + config.details_poll_interval
+        time.monotonic() + config.poll_interval
         if config.details_poll_interval > 0
         else 0.0
     )
