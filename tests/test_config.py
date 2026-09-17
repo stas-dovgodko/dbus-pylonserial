@@ -70,6 +70,26 @@ service_name=com.victronenergy.battery.pylontech_console
         finally:
             os.unlink(path)
 
+    def test_allows_opt_in_isolated_battery_namespace(self):
+        content = """[serial]
+port=/dev/ttyUSB0
+[battery]
+[driver]
+service_name=com.victronenergy.battery.pylontechmonitor_rs232
+"""
+        with tempfile.NamedTemporaryFile("w", delete=False) as handle:
+            handle.write(content)
+            path = handle.name
+        try:
+            config = load_config(path)
+        finally:
+            os.unlink(path)
+
+        self.assertEqual(
+            "com.victronenergy.battery.pylontechmonitor_rs232",
+            config.service_name,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

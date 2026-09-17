@@ -12,6 +12,7 @@ SAFE_SERVICE_NAME_RE = re.compile(
     r"pylontechmonitor\.[A-Za-z0-9_]+|"
     r"unsupported\.pylontechmonitor_[A-Za-z0-9_]+|"
     r"telemetry\.pylontechmonitor_[A-Za-z0-9_]+|"
+    r"battery\.pylontechmonitor_[A-Za-z0-9_]+|"
     r"dcload\.pylontechmonitor_[A-Za-z0-9_]+)$"
 )
 

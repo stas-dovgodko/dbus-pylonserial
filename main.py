@@ -73,6 +73,11 @@ def _probe(config: DriverConfig) -> int:
 
 
 def _run(config: DriverConfig, serial_starter: bool = False) -> int:
+    if config.service_name.startswith("com.victronenergy.battery."):
+        LOGGER.warning(
+            "Experimental battery namespace selected; keep this service out of "
+            "the active ESS/DVCC battery selection."
+        )
     # Register the D-Bus object before probing the serial adapter. A slow or
     # temporarily unavailable adapter must not hide the device from Venus OS.
     from dbus.mainloop.glib import DBusGMainLoop

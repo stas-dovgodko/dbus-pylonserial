@@ -30,10 +30,11 @@ command and publishes the aggregated data as
 
 ## ESS and inverter isolation
 
-The driver is **read-only DC-load telemetry** and uses several independent safeguards:
+The default driver mode is **read-only DC-load telemetry** and uses several
+independent safeguards:
 
-- its service name is restricted to the isolated `dcload` namespace. The
-  default service type is `dcload`, which is not a battery source;
+- the default service name is restricted to the isolated `dcload` namespace.
+  The default service type is `dcload`, which is not a battery source;
 - it cannot be configured as `com.victronenergy.battery.*`, so Venus OS does
   not discover it as a main battery monitor;
 - it does not publish `/Info/MaxChargeVoltage`, `/Info/MaxChargeCurrent`,
@@ -43,11 +44,20 @@ The driver is **read-only DC-load telemetry** and uses several independent safeg
   `com.victronenergy.system`, `com.victronenergy.vebus`, or the primary battery
   service.
 
-Consequently, the service is not offered in the Main battery monitor selector
+Consequently, the default service is not offered in the Main battery monitor selector
 and is not used by `dbus-systemcalc`, ESS, DVCC, Shared Voltage Sense, or Shared
 Current Sense. Its values are available only to clients that explicitly read
 the service name. It appears in Device List as a DC-load device rather than as
 a battery.
+
+An experimental opt-in mode is also accepted for testing the standard battery
+page: set `driver.service_name` to
+`com.victronenergy.battery.pylontechmonitor_rs232`. The driver still omits
+`/Info/MaxChargeVoltage`, `/Info/MaxChargeCurrent`, and
+`/Info/MaxDischargeCurrent`, and remains read-only. However, the `battery.`
+namespace itself makes the service a battery candidate in Venus OS. Do not
+select it as the active battery for ESS/DVCC; the absence of limit paths is not
+a guarantee that system software will ignore it.
 
 ## Data acquisition scope
 
@@ -292,8 +302,10 @@ svc -t /service/dbus-pylontech-console
 svstat /service/dbus-pylontech-console
 ```
 
-Do not change the service namespace to `com.victronenergy.battery` and do not
-attempt to select this dcload service as the main battery monitor.
+The default `dcload` namespace is recommended for normal operation. To test
+the experimental battery page, change only `driver.service_name` in
+`config.ini` to `com.victronenergy.battery.pylontechmonitor_rs232`, restart the
+service, and ensure that Venus OS has not selected it as the active battery.
 
 After starting the service, run the read-only isolation check:
 
@@ -301,9 +313,9 @@ After starting the service, run the read-only isolation check:
 /data/apps/dbus-pylontech-console/verify-isolation.sh
 ```
 
-The check fails if the Pylontech namespace appears as the active battery service
-or in the list of available battery monitors. It also confirms that the custom
-Pylontech paths can be read.
+The check is intended for the default dcload mode and fails if the Pylontech
+namespace appears as the active battery service or in the list of available
+battery monitors. It also confirms that the custom Pylontech paths can be read.
 
 ## Development and tests
 

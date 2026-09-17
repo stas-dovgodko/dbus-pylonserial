@@ -7,9 +7,9 @@ DEVICE_SERVICE_BASE=$(sed -n 's/^[[:space:]]*service_name[[:space:]]*=[[:space:]
 DEVICE_SERVICE="${DEVICE_SERVICE_BASE}_1"
 
 case "$DEVICE_SERVICE_BASE" in
-    com.victronenergy.pylontechmonitor.*|com.victronenergy.unsupported.pylontechmonitor_*|com.victronenergy.telemetry.pylontechmonitor_*|com.victronenergy.dcload.pylontechmonitor_*) ;;
+    com.victronenergy.pylontechmonitor.*|com.victronenergy.unsupported.pylontechmonitor_*|com.victronenergy.telemetry.pylontechmonitor_*|com.victronenergy.dcload.pylontechmonitor_*|com.victronenergy.battery.pylontechmonitor_*) ;;
     *)
-        echo "FAIL: config.ini does not contain a safe dcload service name." >&2
+        echo "FAIL: config.ini does not contain an isolated Pylontech service name." >&2
         exit 1
         ;;
 esac

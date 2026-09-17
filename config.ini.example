@@ -23,6 +23,8 @@ poll_interval = 5
 details_poll_interval = 60
 failure_threshold = 3
 device_instance = 288
-# The DC-load service type is visible in Devices but is not a battery source.
+# Default: DC-load is visible in Devices but is not a battery source.
+# Experimental battery GUI mode (omit ESS/DVCC limit paths) can be tested with:
+# service_name = com.victronenergy.battery.pylontechmonitor_rs232
 service_name = com.victronenergy.dcload.pylontechmonitor_rs232
 log_level = INFO
