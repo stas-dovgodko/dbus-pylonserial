@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pylontech panel</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; background: #070b12; color: #e8edf5; }
+    main { max-width: 1100px; margin: 0 auto; padding: 32px 20px 60px; }
+    h1 { margin: 0 0 8px; font-size: clamp(28px, 5vw, 48px); }
+    .muted { color: #95a3b8; }
+    .status { display: inline-flex; gap: 8px; align-items: center; margin: 20px 0 28px; padding: 8px 14px; border: 1px solid #245c48; border-radius: 999px; color: #86efac; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #22c55e; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+    .card { padding: 20px; min-height: 92px; border: 1px solid #202d40; border-radius: 14px; background: #101927; }
+    .label { color: #95a3b8; font-size: 14px; }
+    .value { margin-top: 10px; font-size: 28px; font-weight: 600; }
+    .notice { margin-top: 24px; padding: 18px 20px; border-left: 4px solid #3984d8; border-radius: 8px; background: #101927; line-height: 1.5; }
+    code { color: #b8d7ff; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="muted">Standalone Cerbo panel</div>
+    <h1>Pylontech telemetry</h1>
+    <div class="status"><span class="dot"></span>Panel is reachable</div>
+    <section class="grid" aria-label="Telemetry placeholders">
+      <div class="card"><div class="label">Modules</div><div class="value">—</div></div>
+      <div class="card"><div class="label">Voltage</div><div class="value">—</div></div>
+      <div class="card"><div class="label">Current</div><div class="value">—</div></div>
+      <div class="card"><div class="label">State of charge</div><div class="value">—</div></div>
+    </section>
+    <div class="notice">
+      This is the first connectivity stub. The next version will replace these
+      placeholders with the full module and cell data from D-Bus.
+    </div>
+  </main>
+</body>
+</html>

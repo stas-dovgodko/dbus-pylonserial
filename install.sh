@@ -6,6 +6,7 @@ APP_DIR="/data/apps/$APP_NAME"
 SERVICE_LINK="/service/$APP_NAME"
 SERIAL_STARTER_CONF="/data/conf/serial-starter.d/dbus-pylonserial.conf"
 GUI_APP_LINK="/data/apps/enabled/$APP_NAME"
+PANEL_WEB_ROOT="/var/www/venus/gui-v2/pylontech-panel"
 SOURCE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 SERIAL_STARTER_DEVICE=""
 
@@ -188,6 +189,15 @@ install_gui_v2_plugin() {
 }
 
 install_gui_v2_plugin
+
+if [ -d "/var/www/venus/gui-v2" ] \
+    && mkdir -p "$PANEL_WEB_ROOT" 2>/dev/null \
+    && cp -R "$SOURCE_DIR/panel/." "$PANEL_WEB_ROOT/"; then
+    touch "$PANEL_WEB_ROOT/.pylontech-panel"
+    echo "Installed standalone panel at /gui-v2/pylontech-panel/."
+else
+    echo "Existing GUI web root is unavailable; standalone panel was not installed." >&2
+fi
 
 RC_LOCAL="/data/rc.local"
 DIRECT_HOOK="ln -sfn $APP_DIR/service $SERVICE_LINK"

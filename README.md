@@ -186,6 +186,14 @@ works; update Venus OS or use the local GUI to obtain the full custom page.
 After updating an existing installation, run the installer again so it copies
 the plugin bundle and refreshes `/data/apps/enabled/dbus-pylontech-console`.
 
+## Standalone browser panel
+
+The installer can place a standalone panel into the existing GUI-v2 web root,
+without starting another HTTP service. When `/var/www/venus/gui-v2` is
+available, open `https://<cerbo-address>/gui-v2/pylontech-panel/` in a browser.
+The first version is a connectivity stub; it will be extended with the full
+D-Bus module and cell tree.
+
 ## Production installation with Venus OS serial-starter
 
 Venus OS normally probes unclassified USB serial adapters with several drivers.
