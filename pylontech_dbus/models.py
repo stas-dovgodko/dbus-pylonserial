@@ -183,7 +183,7 @@ class BankReading:
         values = [
             item.statistics.soh
             for item in self.modules
-            if item.statistics and item.statistics.soh is not None
+            if item.statistics and item.statistics.soh is not None and item.statistics.soh > 0
         ]
         return round(sum(values) / len(values), 1) if values else None
 

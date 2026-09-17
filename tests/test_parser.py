@@ -136,6 +136,16 @@ pylon_debug>"""
         self.assertEqual(3.317, cells[1].voltage)
         self.assertTrue(cells[1].balancing)
 
+    def test_treats_zero_soh_as_unavailable(self):
+        stat = """stat 1
+Device address           1
+SOH             :       0
+Pwr Percent     :       94
+Command completed successfully
+pylon>"""
+
+        self.assertIsNone(parse_stat_response(stat, 1).soh)
+
     def test_preserves_one_based_cell_numbers(self):
         response = """bat 1
 Battery Volt Curr Tempr Base State Volt. State Curr. State Temp. State SOC Coulomb BAL

@@ -369,10 +369,14 @@ def parse_stat_response(
                 expected_address, address
             )
         )
+    soh = counters.get("soh")
+    # Pylontech reports SOH=0 when the value is unavailable on a module.
+    if soh is not None and not 0 < soh <= 100:
+        soh = None
     return ModuleStatistics(
         address=address,
         cycles=_first_counter(counters, "cycle times", "cycle time", "cycles"),
-        soh=counters.get("soh"),
+        soh=soh,
         soc=counters.get("pwr percent"),
         charge_count=counters.get("charge cnt"),
         discharge_count=_first_counter(counters, "discharge cnt", "dsg cnt"),
