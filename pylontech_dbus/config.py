@@ -11,7 +11,8 @@ SAFE_SERVICE_NAME_RE = re.compile(
     r"^com\.victronenergy\.(?:"
     r"pylontechmonitor\.[A-Za-z0-9_]+|"
     r"unsupported\.pylontechmonitor_[A-Za-z0-9_]+|"
-    r"telemetry\.pylontechmonitor_[A-Za-z0-9_]+)$"
+    r"telemetry\.pylontechmonitor_[A-Za-z0-9_]+|"
+    r"dcload\.pylontechmonitor_[A-Za-z0-9_]+)$"
 )
 
 
@@ -77,7 +78,7 @@ def load_config(path: str) -> DriverConfig:
         device_instance=driver_section.getint("device_instance", 288),
         service_name=driver_section.get(
             "service_name",
-            "com.victronenergy.telemetry.pylontechmonitor_rs232",
+            "com.victronenergy.dcload.pylontechmonitor_rs232",
         ).strip(),
         log_level=driver_section.get("log_level", "INFO").strip().upper(),
     )
@@ -111,7 +112,7 @@ def load_config(path: str) -> DriverConfig:
     if not SAFE_SERVICE_NAME_RE.match(config.service_name):
         raise ValueError(
             "driver.service_name must use the isolated "
-            "pylontechmonitor namespace"
+            "isolated pylontechmonitor namespace"
         )
 
     return config

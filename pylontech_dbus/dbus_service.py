@@ -1,4 +1,4 @@
-"""Isolated Victron D-Bus telemetry service."""
+"""Read-only Victron D-Bus service for Pylontech DC-load telemetry."""
 
 from __future__ import annotations
 
@@ -615,7 +615,7 @@ class PylontechDbusService:
 
 
 class PylontechModuleServices:
-    """Expose each online Pylontech module as an isolated telemetry service."""
+    """Expose each online Pylontech module as an isolated DC-load service."""
 
     def __init__(self, config: DriverConfig) -> None:
         self.config = config

@@ -56,7 +56,7 @@ poll_interval=5
 details_poll_interval=60
 failure_threshold=3
 device_instance=288
-service_name=com.victronenergy.unsupported.pylontechmonitor_rs232
+service_name=com.victronenergy.dcload.pylontechmonitor_rs232
 """
         with tempfile.NamedTemporaryFile("w", delete=False) as handle:
             handle.write(content)
@@ -156,7 +156,7 @@ service_name=com.victronenergy.unsupported.pylontechmonitor_rs232
         first = services._services[1]
         fourth = services._services[4]
         self.assertEqual(
-            "com.victronenergy.unsupported.pylontechmonitor_rs232_1",
+            "com.victronenergy.dcload.pylontechmonitor_rs232_1",
             first.config.service_name,
         )
         self.assertEqual(291, fourth.config.device_instance)
