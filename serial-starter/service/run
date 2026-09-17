@@ -4,8 +4,15 @@ set -eu
 APP_DIR="/data/apps/dbus-pylontech-console"
 export PYTHONPATH="/opt/victronenergy/dbus-systemcalc-py/ext/velib_python${PYTHONPATH:+:$PYTHONPATH}"
 
+# serial-starter copies this template into a service named
+# dbus-pylonserial.<tty>. Derive the actual device instead of relying on a
+# placeholder that may be passed literally by the platform.
+SERVICE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+DEVICE_NAME=${SERVICE_DIR##*.}
+SERIAL_PORT="/dev/$DEVICE_NAME"
+
 exec 2>&1
 exec /usr/bin/python3 -u "$APP_DIR/main.py" \
     --config "$APP_DIR/config.ini" \
-    --serial-port /dev/TTY \
+    --serial-port "$SERIAL_PORT" \
     --serial-starter

@@ -164,7 +164,9 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
 
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
-    GLib.timeout_add(0, poll)
+    # Start the first poll once. A repeating zero-delay GLib timeout would
+    # create a busy-loop while the worker is in flight.
+    poll()
     GLib.timeout_add(int(config.poll_interval * 1000), poll)
     LOGGER.info("D-Bus service %s started", config.service_name)
     mainloop.run()
