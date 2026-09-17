@@ -171,9 +171,11 @@ dbus -y com.victronenergy.unsupported.pylontechmonitor_rs232 /Modules/1/Serial G
 ## Device List and GUI v2
 
 The service uses the built-in `unsupported` device type so that it appears in
-Settings -> Device List without masquerading as a Victron battery. The generic
-page always shows a live bank summary through `/Reason` and provides the normal
-Device info page.
+Settings -> Device List without masquerading as a Victron battery. Each online
+Pylontech module is exposed as its own read-only service (for example,
+`...pylontechmonitor_rs232_1`), with the module's complete parameter tree and
+cell paths under `/Modules/1/...`. This keeps the modules as separate Device
+List rows without enabling ESS/DVCC battery control.
 
 The installer also enables the bundled GUI v2 plugin. It adds a `Pylontech
 battery data` page containing bank values, module pages, cycles, serial

@@ -6,7 +6,10 @@ import unittest
 from dataclasses import replace
 
 from pylontech_dbus.config import load_config
-from pylontech_dbus.dbus_service import PylontechDbusService
+from pylontech_dbus.dbus_service import (
+    PylontechDbusService,
+    PylontechModuleServices,
+)
 from pylontech_dbus.models import (
     BankReading,
     CellReading,
@@ -141,6 +144,24 @@ service_name=com.victronenergy.unsupported.pylontechmonitor_rs232
         self.assertEqual(2, values["/Alarms/BmsCable"])
         self.assertIsNone(values["/Dc/0/Voltage"])
         self.assertEqual(4, values["/System/NrOfModulesOffline"])
+
+    def test_exposes_each_module_as_a_separate_service(self):
+        config = load_config(self.path)
+        services = PylontechModuleServices(config)
+        reading = parse_pwr_response(PWR_RESPONSE, expected_modules=4)
+
+        services.publish(reading)
+
+        self.assertEqual({1, 2, 3, 4}, set(services._services))
+        first = services._services[1]
+        fourth = services._services[4]
+        self.assertEqual(
+            "com.victronenergy.unsupported.pylontechmonitor_rs232_1",
+            first.config.service_name,
+        )
+        self.assertEqual(291, fourth.config.device_instance)
+        self.assertEqual(1, first._service.values["/Modules/1/Online"])
+        self.assertEqual(1, fourth._service.values["/Modules/1/Online"])
 
 
 if __name__ == "__main__":

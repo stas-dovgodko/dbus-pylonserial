@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import platform
 import sys
+from dataclasses import replace
 from typing import Dict, Optional
 
 from . import __version__
@@ -131,7 +132,7 @@ class PylontechDbusService:
         self._add(
             "/ProductId", 0xF0A1, lambda _path, value: "0x{:04x}".format(value)
         )
-        self._add("/ProductName", "Pylontech Console Battery Monitor")
+        self._add("/ProductName", self.config.battery.custom_name)
         self._add("/FirmwareVersion", __version__)
         self._add("/Connected", 0)
         self._add("/CustomName", self.config.battery.custom_name)
@@ -605,3 +606,49 @@ class PylontechDbusService:
         self._set("/Reason", "Pylontech console disconnected")
         for number in range(1, self.config.battery.max_modules + 1):
             self._clear_module(number)
+
+
+class PylontechModuleServices:
+    """Expose each online Pylontech module as an isolated read-only service."""
+
+    def __init__(self, config: DriverConfig) -> None:
+        self.config = config
+        self._services = {}
+
+    def _service_for(self, module: ModuleReading) -> PylontechDbusService:
+        service = self._services.get(module.number)
+        if service is not None:
+            return service
+        module_config = replace(
+            self.config,
+            service_name="{}_{}".format(
+                self.config.service_name, module.number
+            ),
+            device_instance=self.config.device_instance + module.number - 1,
+            battery=replace(
+                self.config.battery,
+                expected_modules=1,
+                max_modules=1,
+                custom_name="{} {}".format(
+                    self.config.battery.custom_name, module.number
+                ),
+            ),
+        )
+        service = PylontechDbusService(module_config)
+        self._services[module.number] = service
+        return service
+
+    def publish(self, reading: BankReading) -> None:
+        online = set()
+        for module in reading.modules:
+            online.add(module.number)
+            service = self._service_for(module)
+            normalized = replace(module, number=1)
+            service.publish(BankReading.from_modules((normalized,)))
+        for number, service in self._services.items():
+            if number not in online:
+                service.disconnect()
+
+    def disconnect(self) -> None:
+        for service in self._services.values():
+            service.disconnect()

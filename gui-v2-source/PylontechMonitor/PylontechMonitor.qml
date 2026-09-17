@@ -4,7 +4,7 @@ import Victron.VenusOS
 DeviceListPluginPage {
     id: root
 
-    title: "Pylontech battery monitor"
+    title: "Pylontech battery data"
 
     GradientListView {
         header: SettingsColumn {
@@ -52,7 +52,7 @@ DeviceListPluginPage {
             required property int index
             readonly property int moduleNumber: index + 1
             preferredVisible: online.value === 1
-            text: "Module " + moduleNumber
+            text: "Battery " + moduleNumber
             secondaryText: soc.valid
                 ? soc.value + "%" + (cycles.valid ? " | " + cycles.value + " cycles" : "")
                 : ""
@@ -85,7 +85,7 @@ DeviceListPluginPage {
             required property string serviceUid
             required property int moduleNumber
             readonly property string modulePrefix: serviceUid + "/Modules/" + moduleNumber
-            title: "Pylontech module " + moduleNumber
+            title: "Pylontech battery " + moduleNumber
 
             GradientListView {
                 model: VisibleItemModel {

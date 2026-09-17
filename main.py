@@ -78,10 +78,10 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
     from dbus.mainloop.glib import DBusGMainLoop
     from gi.repository import GLib
 
-    from pylontech_dbus.dbus_service import PylontechDbusService
+    from pylontech_dbus.dbus_service import PylontechModuleServices
 
     DBusGMainLoop(set_as_default=True)
-    service = PylontechDbusService(config)
+    service = PylontechModuleServices(config)
     LOGGER.info(
         "D-Bus service %s registered; probing %s",
         config.service_name,
