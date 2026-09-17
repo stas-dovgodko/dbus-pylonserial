@@ -75,6 +75,10 @@ service_name=com.victronenergy.dcload.pylontechmonitor_rs232
         reading = parse_pwr_response(PWR_RESPONSE, expected_modules=4)
         detailed_module = replace(
             reading.modules[0],
+            cell_voltage_low=3.316,
+            cell_voltage_low_id=1,
+            cell_voltage_high=3.316,
+            cell_voltage_high_id=1,
             metadata=ModuleMetadata(
                 address=1,
                 manufacturer="Pylon",
@@ -129,6 +133,10 @@ service_name=com.victronenergy.dcload.pylontechmonitor_rs232
         self.assertIn("4/4 modules", values["/Reason"])
         self.assertEqual(666, values["/Modules/1/Cycles"])
         self.assertEqual("HPTCR03170C09377", values["/Modules/1/Serial"])
+        self.assertEqual("C1", values["/System/MinVoltageCellId"])
+        self.assertEqual("C1", values["/System/MaxVoltageCellId"])
+        self.assertEqual(15, values["/System/NrOfCellsPerBattery"])
+        self.assertEqual(4, values["/System/NrOfBatteries"])
         self.assertEqual(90.0, values["/Modules/1/MaxChargeCurrent"])
         self.assertEqual(115200, values["/Modules/1/ConsolePortRate"])
         self.assertEqual(

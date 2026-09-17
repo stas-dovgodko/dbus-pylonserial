@@ -211,6 +211,36 @@ class BankReading:
             return None
         return round(self.cell_voltage_high - self.cell_voltage_low, 3)
 
+    @property
+    def cell_voltage_low_id(self) -> Optional[int]:
+        candidates = [
+            (item.cell_voltage_low, item.cell_voltage_low_id)
+            for item in self.modules
+            if item.cell_voltage_low is not None and item.cell_voltage_low_id is not None
+        ]
+        return min(candidates, key=lambda item: item[0])[1] if candidates else None
+
+    @property
+    def cell_voltage_high_id(self) -> Optional[int]:
+        candidates = [
+            (item.cell_voltage_high, item.cell_voltage_high_id)
+            for item in self.modules
+            if item.cell_voltage_high is not None and item.cell_voltage_high_id is not None
+        ]
+        return max(candidates, key=lambda item: item[0])[1] if candidates else None
+
+    @property
+    def cells_per_battery(self) -> Optional[int]:
+        counts = []
+        for item in self.modules:
+            if item.metadata and item.metadata.cell_count:
+                counts.append(item.metadata.cell_count)
+            elif item.cells:
+                counts.append(len(item.cells))
+        if not counts:
+            return None
+        return max(counts)
+
     def as_dict(self) -> Dict[str, object]:
         return {
             "voltage": self.voltage,
@@ -220,7 +250,10 @@ class BankReading:
             "soh": self.soh,
             "temperature": self.temperature,
             "cell_voltage_low": self.cell_voltage_low,
+            "cell_voltage_low_id": self.cell_voltage_low_id,
             "cell_voltage_high": self.cell_voltage_high,
+            "cell_voltage_high_id": self.cell_voltage_high_id,
             "cell_voltage_delta": self.cell_voltage_delta,
+            "cells_per_battery": self.cells_per_battery,
             "modules": [item.as_dict() for item in self.modules],
         }

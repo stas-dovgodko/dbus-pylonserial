@@ -154,8 +154,12 @@ class PylontechDbusService:
         self._add("/Settings/HasTemperature", 1)
         self._add("/System/Soh", None, _format_value("%", 1))
         self._add("/System/MinCellVoltage", None, _format_value("V", 3))
+        self._add("/System/MinVoltageCellId", None)
         self._add("/System/MaxCellVoltage", None, _format_value("V", 3))
+        self._add("/System/MaxVoltageCellId", None)
         self._add("/System/CellVoltageDiff", None, _format_value("V", 3))
+        self._add("/System/NrOfBatteries", 0)
+        self._add("/System/NrOfCellsPerBattery", None)
 
         for path in (
             "/Alarms/HighVoltage",
@@ -562,8 +566,22 @@ class PylontechDbusService:
         self._set("/Dc/0/Temperature", reading.temperature)
         self._set("/System/Soh", reading.soh)
         self._set("/System/MinCellVoltage", reading.cell_voltage_low)
+        self._set(
+            "/System/MinVoltageCellId",
+            "C{}".format(reading.cell_voltage_low_id)
+            if reading.cell_voltage_low_id is not None
+            else None,
+        )
         self._set("/System/MaxCellVoltage", reading.cell_voltage_high)
+        self._set(
+            "/System/MaxVoltageCellId",
+            "C{}".format(reading.cell_voltage_high_id)
+            if reading.cell_voltage_high_id is not None
+            else None,
+        )
         self._set("/System/CellVoltageDiff", reading.cell_voltage_delta)
+        self._set("/System/NrOfBatteries", module_count)
+        self._set("/System/NrOfCellsPerBattery", reading.cells_per_battery)
         self._set("/InstalledCapacity", installed_capacity)
         self._set("/Capacity", remaining_capacity)
         self._set("/System/NrOfModulesOnline", module_count)
@@ -596,6 +614,7 @@ class PylontechDbusService:
         self._set("/Alarms/BmsCable", 2)
         self._set("/System/NrOfModulesOnline", 0)
         self._set("/System/NrOfModulesOffline", expected)
+        self._set("/System/NrOfBatteries", 0)
         for path in (
             "/Soc",
             "/Dc/0/Voltage",
@@ -605,8 +624,11 @@ class PylontechDbusService:
             "/Capacity",
             "/System/Soh",
             "/System/MinCellVoltage",
+            "/System/MinVoltageCellId",
             "/System/MaxCellVoltage",
+            "/System/MaxVoltageCellId",
             "/System/CellVoltageDiff",
+            "/System/NrOfCellsPerBattery",
         ):
             self._set(path, None)
         self._set("/Reason", "Pylontech console disconnected")
