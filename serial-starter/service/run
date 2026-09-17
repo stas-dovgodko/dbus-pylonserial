@@ -4,8 +4,18 @@ set -eu
 APP_DIR="/data/apps/dbus-pylontech-console"
 export PYTHONPATH="/opt/victronenergy/dbus-systemcalc-py/ext/velib_python${PYTHONPATH:+:$PYTHONPATH}"
 
+# serial-starter may execute this template without replacing a /dev/TTY
+# placeholder. The generated service directory always contains the real TTY
+# name, so derive the port from it instead of relying on substitution.
+SERVICE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+DEVICE_NAME=${SERVICE_DIR##*.}
+case "$DEVICE_NAME" in
+    tty*) SERIAL_PORT="/dev/$DEVICE_NAME" ;;
+    *) SERIAL_PORT="/dev/TTY" ;;
+esac
+
 exec 2>&1
 exec /usr/bin/python3 -u "$APP_DIR/main.py" \
     --config "$APP_DIR/config.ini" \
-    --serial-port /dev/TTY \
+    --serial-port "$SERIAL_PORT" \
     --serial-starter

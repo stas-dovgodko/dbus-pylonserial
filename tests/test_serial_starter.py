@@ -15,7 +15,9 @@ class SerialStarterTest(unittest.TestCase):
             ROOT / "serial-starter" / "service" / "run"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("--serial-port /dev/TTY", run_script)
+        self.assertIn('SERVICE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)', run_script)
+        self.assertIn('tty*) SERIAL_PORT="/dev/$DEVICE_NAME"', run_script)
+        self.assertIn('--serial-port "$SERIAL_PORT"', run_script)
         self.assertIn("--serial-starter", run_script)
 
     def test_uninstaller_preserves_application_and_config(self):
