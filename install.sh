@@ -249,12 +249,13 @@ if [ -n "$SERIAL_STARTER_DEVICE" ]; then
         svc -t /service/serial-starter
         sleep 2
     fi
+    # Use exactly one activation path. Calling start-tty.sh and then triggering
+    # udev for the same TTY can leave multiple supervise processes behind.
     if [ -x /opt/victronenergy/serial-starter/start-tty.sh ]; then
         if ! run_tty_helper /opt/victronenergy/serial-starter/start-tty.sh; then
-            echo "Warning: start-tty.sh did not finish; udev trigger will continue activation." >&2
+            echo "Warning: start-tty.sh did not finish; service activation may need a reconnect." >&2
         fi
-    fi
-    if udevadm trigger --help 2>&1 | grep -q -- '--sysname-match'; then
+    elif udevadm trigger --help 2>&1 | grep -q -- '--sysname-match'; then
         udevadm trigger --action=add --sysname-match="$DEVICE_NAME"
     else
         udevadm trigger --action=add --subsystem-match=tty

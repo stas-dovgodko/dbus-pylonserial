@@ -43,9 +43,16 @@ class SerialStarterTest(unittest.TestCase):
         self.assertLess(stop_position, cache_position)
         self.assertLess(cache_position, restart_position)
         self.assertLess(restart_position, start_position)
+        self.assertIn(
+            "run_tty_helper /opt/victronenergy/serial-starter/stop-tty.sh",
+            installer,
+        )
+        self.assertIn(
+            "run_tty_helper /opt/victronenergy/serial-starter/start-tty.sh",
+            installer,
+        )
         self.assertLess(start_position, trigger_position)
-        self.assertIn('stop-tty.sh "$DEVICE_NAME"', installer)
-        self.assertIn('start-tty.sh "$DEVICE_NAME"', installer)
+        self.assertIn("elif udevadm trigger", installer)
 
     def test_serial_port_override_does_not_change_other_settings(self):
         config = DriverConfig(

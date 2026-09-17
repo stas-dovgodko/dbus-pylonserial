@@ -305,7 +305,18 @@ raw `stat N` response with `probe.py --details`.
 **The process uses excessive CPU or two readers appear**
 
 Stop manually launched `main.py` processes before starting the supervised
-service. Only one process may own the console port.
+service. Only one process may own the console port. If repeated installer runs
+left stale supervisors, stop the TTY first and inspect the remaining PIDs:
+
+```sh
+svc -d /service/dbus-pylonserial.ttyUSB0
+/opt/victronenergy/serial-starter/stop-tty.sh ttyUSB0 2>/dev/null || true
+ps | grep '[s]upervise dbus-pylonserial.ttyUSB0'
+```
+
+Terminate only the listed stale `supervise` PIDs, then activate the service once
+with `start-tty.sh` or by reconnecting the adapter. Do not run both activation
+methods for the same TTY.
 
 ## Uninstall
 
