@@ -10,7 +10,8 @@ from dataclasses import dataclass
 SAFE_SERVICE_NAME_RE = re.compile(
     r"^com\.victronenergy\.(?:"
     r"pylontechmonitor\.[A-Za-z0-9_]+|"
-    r"unsupported\.pylontechmonitor_[A-Za-z0-9_]+)$"
+    r"unsupported\.pylontechmonitor_[A-Za-z0-9_]+|"
+    r"telemetry\.pylontechmonitor_[A-Za-z0-9_]+)$"
 )
 
 
@@ -76,7 +77,7 @@ def load_config(path: str) -> DriverConfig:
         device_instance=driver_section.getint("device_instance", 288),
         service_name=driver_section.get(
             "service_name",
-            "com.victronenergy.unsupported.pylontechmonitor_rs232",
+            "com.victronenergy.telemetry.pylontechmonitor_rs232",
         ).strip(),
         log_level=driver_section.get("log_level", "INFO").strip().upper(),
     )

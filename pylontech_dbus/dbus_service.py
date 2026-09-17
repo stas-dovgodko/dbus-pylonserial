@@ -246,6 +246,12 @@ class PylontechDbusService:
     def _set(self, path: str, value) -> None:
         self._service[path] = value
 
+    def set_identity(self, product_name: str, custom_name: str) -> None:
+        """Update the visible product and custom names after module details arrive."""
+
+        self._set("/ProductName", product_name)
+        self._set("/CustomName", custom_name)
+
     def _clear_module(self, number: int) -> None:
         base = "/Modules/{}".format(number)
         self._set(base + "/Online", 0)
@@ -609,7 +615,7 @@ class PylontechDbusService:
 
 
 class PylontechModuleServices:
-    """Expose each online Pylontech module as an isolated read-only service."""
+    """Expose each online Pylontech module as an isolated telemetry service."""
 
     def __init__(self, config: DriverConfig) -> None:
         self.config = config
@@ -657,6 +663,13 @@ class PylontechModuleServices:
             service = self._service_for(module)
             normalized = replace(module, number=1)
             service.publish(BankReading.from_modules((normalized,)))
+            model = (
+                module.metadata.model.strip()
+                if module.metadata and module.metadata.model
+                else ""
+            )
+            if model:
+                service.set_identity(model, "{} {}".format(model, module.number))
         for number, service in self._services.items():
             if number not in online:
                 service.disconnect()

@@ -3,7 +3,7 @@
 An isolated telemetry driver for Victron Venus OS. The driver reads the RS232
 console port of the master Pylontech/Pytes battery using the read-only `pwr`
 command and publishes the aggregated data as
-`com.victronenergy.unsupported.pylontechmonitor_rs232`.
+`com.victronenergy.telemetry.pylontechmonitor_rs232`.
 
 ## Supported features
 
@@ -33,7 +33,7 @@ command and publishes the aggregated data as
 The driver is **telemetry-only** and uses several independent safeguards:
 
 - its service name is restricted to the custom telemetry namespace. The
-  default service type is `unsupported`, which GUI v2 can list as a device but
+  default service type is `telemetry`, which GUI v2 can list as a device but
   `dbus-systemcalc` does not treat as a battery;
 - it cannot be configured as `com.victronenergy.battery.*`, so Venus OS does
   not discover it as a main battery monitor;
@@ -47,8 +47,8 @@ The driver is **telemetry-only** and uses several independent safeguards:
 Consequently, the service is not offered in the Main battery monitor selector
 and is not used by `dbus-systemcalc`, ESS, DVCC, Shared Voltage Sense, or Shared
 Current Sense. Its values are available only to clients that explicitly read
-the custom service name. It appears in Device List as an unsupported telemetry
-device rather than as a regular battery.
+the custom service name. It appears in Device List as a telemetry device rather
+than as a regular battery.
 
 ## Data acquisition scope
 
@@ -162,15 +162,15 @@ python3 main.py --config config.ini
 Verify the published values on Venus OS:
 
 ```sh
-dbus -y com.victronenergy.unsupported.pylontechmonitor_rs232 /Soc GetValue
-dbus -y com.victronenergy.unsupported.pylontechmonitor_rs232 /Dc/0/Voltage GetValue
-dbus -y com.victronenergy.unsupported.pylontechmonitor_rs232 /Modules/1/Cycles GetValue
-dbus -y com.victronenergy.unsupported.pylontechmonitor_rs232 /Modules/1/Serial GetValue
+dbus -y com.victronenergy.telemetry.pylontechmonitor_rs232_1 /Soc GetValue
+dbus -y com.victronenergy.telemetry.pylontechmonitor_rs232_1 /Dc/0/Voltage GetValue
+dbus -y com.victronenergy.telemetry.pylontechmonitor_rs232_1 /Modules/1/Cycles GetValue
+dbus -y com.victronenergy.telemetry.pylontechmonitor_rs232_1 /Modules/1/Serial GetValue
 ```
 
 ## Device List and GUI v2
 
-The service uses the built-in `unsupported` device type so that it appears in
+The service uses the isolated `telemetry` device type so that it appears in
 Settings -> Device List without masquerading as a Victron battery. Each online
 Pylontech module is exposed as its own read-only service (for example,
 `...pylontechmonitor_rs232_1`), with the module's complete parameter tree and
@@ -228,7 +228,7 @@ vi /data/apps/dbus-pylontech-console/config.ini
 
 Set `battery.expected_modules` to the number confirmed by `probe.py`. The
 installer migrates the previous `com.victronenergy.pylontechmonitor.*` default
-to the Device List-safe `com.victronenergy.unsupported.pylontechmonitor_*`
+to the Device List-safe `com.victronenergy.telemetry.pylontechmonitor_*`
 namespace while preserving the suffix. The
 installer reloads serial-starter and re-enables only the selected TTY. If the
 service does not appear, unplug and reconnect the selected USB adapter, or

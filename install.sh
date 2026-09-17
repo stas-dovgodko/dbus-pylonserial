@@ -145,9 +145,9 @@ if [ ! -f "$APP_DIR/config.ini" ]; then
     echo "Created $APP_DIR/config.ini. Review it before relying on the service."
 fi
 
-if grep -q '^[[:space:]]*service_name[[:space:]]*=[[:space:]]*com\.victronenergy\.pylontechmonitor\.' "$APP_DIR/config.ini"; then
-    sed -i 's/^[[:space:]]*service_name[[:space:]]*=[[:space:]]*com\.victronenergy\.pylontechmonitor\.\([A-Za-z0-9_]*\)[[:space:]]*$/service_name = com.victronenergy.unsupported.pylontechmonitor_\1/' "$APP_DIR/config.ini"
-    echo "Migrated the telemetry service to the read-only Device List namespace."
+if grep -Eq '^[[:space:]]*service_name[[:space:]]*=[[:space:]]*com\.victronenergy\.(pylontechmonitor\.|unsupported\.pylontechmonitor_)' "$APP_DIR/config.ini"; then
+    sed -i -E 's#^[[:space:]]*service_name[[:space:]]*=.*com\.victronenergy\.(pylontechmonitor\.|unsupported\.pylontechmonitor_)([A-Za-z0-9_]+)[[:space:]]*$#service_name = com.victronenergy.telemetry.pylontechmonitor_\2#' "$APP_DIR/config.ini"
+    echo "Migrated the service to the telemetry Device List namespace."
 fi
 
 install_gui_v2_plugin() {

@@ -23,6 +23,6 @@ poll_interval = 5
 details_poll_interval = 60
 failure_threshold = 3
 device_instance = 288
-# The unsupported service type is visible in Devices but ignored as a battery.
-service_name = com.victronenergy.unsupported.pylontechmonitor_rs232
+# The telemetry service type is visible in Devices but ignored as a battery.
+service_name = com.victronenergy.telemetry.pylontechmonitor_rs232
 log_level = INFO
