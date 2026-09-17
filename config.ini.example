@@ -23,8 +23,9 @@ poll_interval = 5
 details_poll_interval = 60
 failure_threshold = 3
 device_instance = 288
-# Default: DC-load is visible in Devices but is not a battery source.
-# Experimental battery GUI mode (omit ESS/DVCC limit paths) can be tested with:
-# service_name = com.victronenergy.battery.pylontechmonitor_rs232
-service_name = com.victronenergy.dcload.pylontechmonitor_rs232
+# Default: battery namespace exposes the standard battery page. The driver is
+# read-only and deliberately omits ESS/DVCC limit paths.
+service_name = com.victronenergy.battery.pylontechmonitor_rs232
+# To keep it out of the battery selector, use the isolated DC-load namespace:
+# service_name = com.victronenergy.dcload.pylontechmonitor_rs232
 log_level = INFO

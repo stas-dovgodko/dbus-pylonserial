@@ -163,6 +163,26 @@ service_name=com.victronenergy.dcload.pylontechmonitor_rs232
         self.assertEqual(1, first._service.values["/Modules/1/Online"])
         self.assertEqual(1, fourth._service.values["/Modules/1/Online"])
 
+    def test_module_identity_uses_manufacturer_model_and_serial(self):
+        config = load_config(self.path)
+        services = PylontechModuleServices(config)
+        reading = parse_pwr_response(PWR_RESPONSE, expected_modules=4)
+        module = replace(
+            reading.modules[0],
+            metadata=ModuleMetadata(
+                address=1,
+                manufacturer="Pylontech",
+                model="US3000C",
+                serial_number="SN123456",
+            ),
+        )
+
+        services.publish(BankReading.from_modules((module,)))
+
+        exported = services._services[1]._service.values
+        self.assertEqual("Pylontech US3000C SN123456", exported["/ProductName"])
+        self.assertEqual("Pylontech US3000C SN123456", exported["/CustomName"])
+
 
 if __name__ == "__main__":
     unittest.main()

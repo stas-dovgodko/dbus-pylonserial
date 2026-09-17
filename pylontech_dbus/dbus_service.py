@@ -1,4 +1,4 @@
-"""Read-only Victron D-Bus service for Pylontech DC-load telemetry."""
+"""Read-only Victron D-Bus services for Pylontech telemetry."""
 
 from __future__ import annotations
 
@@ -615,7 +615,7 @@ class PylontechDbusService:
 
 
 class PylontechModuleServices:
-    """Expose each online Pylontech module as an isolated DC-load service."""
+    """Expose each online Pylontech module as an isolated service."""
 
     def __init__(self, config: DriverConfig) -> None:
         self.config = config
@@ -663,13 +663,20 @@ class PylontechModuleServices:
             service = self._service_for(module)
             normalized = replace(module, number=1)
             service.publish(BankReading.from_modules((normalized,)))
-            model = (
-                module.metadata.model.strip()
-                if module.metadata and module.metadata.model
-                else ""
-            )
-            if model:
-                service.set_identity(model, "{} {}".format(model, module.number))
+            if module.metadata:
+                metadata = module.metadata
+                identity = [
+                    metadata.manufacturer if metadata else None,
+                    metadata.model,
+                    metadata.serial_number if metadata else None,
+                ]
+                identity = [str(part).strip() for part in identity if part and str(part).strip()]
+                if not identity:
+                    identity = [self.config.battery.custom_name]
+                if len(identity) < 3:
+                    identity.append("module {}".format(module.number))
+                display_name = " ".join(identity)
+                service.set_identity(display_name, display_name)
         for number, service in self._services.items():
             if number not in online:
                 service.disconnect()

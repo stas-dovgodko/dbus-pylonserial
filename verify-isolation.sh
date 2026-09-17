@@ -18,16 +18,27 @@ active=$(dbus -y "$SYSTEM_SERVICE" /ActiveBatteryService GetValue)
 battery=$(dbus -y "$SYSTEM_SERVICE" /Dc/Battery/BatteryService GetValue)
 available=$(dbus -y "$SYSTEM_SERVICE" /AvailableBatteryServices GetValue)
 
-if printf '%s\n%s\n%s\n' "$active" "$battery" "$available" | grep -q 'pylontechmonitor'; then
-    echo "FAIL: the Pylontech namespace appeared in the system battery selection." >&2
-    exit 1
-fi
+case "$DEVICE_SERVICE_BASE" in
+    com.victronenergy.battery.*)
+        if printf '%s\n%s\n' "$active" "$battery" | grep -Fq -- "$DEVICE_SERVICE_BASE"; then
+            echo "FAIL: the Pylontech battery service is selected as the active system battery." >&2
+            exit 1
+        fi
+        echo "WARN: battery namespace is enabled; keep it out of the active ESS/DVCC selection." >&2
+        ;;
+    *)
+        if printf '%s\n%s\n%s\n' "$active" "$battery" "$available" | grep -q 'pylontechmonitor'; then
+            echo "FAIL: the Pylontech namespace appeared in the system battery selection." >&2
+            exit 1
+        fi
+        ;;
+esac
 
 dbus -y "$DEVICE_SERVICE" /Connected GetValue >/dev/null
 soc=$(dbus -y "$DEVICE_SERVICE" /Soc GetValue)
 voltage=$(dbus -y "$DEVICE_SERVICE" /Dc/0/Voltage GetValue)
 
-echo "PASS: the Pylontech dcload service is available but is not a system battery source."
+echo "PASS: the Pylontech service is available and is not selected as the active system battery."
 echo "ActiveBatteryService: $active"
 echo "BatteryService: $battery"
 echo "Pylontech SOC: $soc"

@@ -6,7 +6,7 @@ from pylontech_dbus.config import load_config
 
 
 class ConfigTest(unittest.TestCase):
-    def test_default_uses_non_battery_dcload_namespace(self):
+    def test_default_uses_battery_namespace(self):
         content = """[serial]
 port=/dev/ttyUSB0
 [battery]
@@ -21,7 +21,7 @@ port=/dev/ttyUSB0
             os.unlink(path)
 
         self.assertEqual(
-            "com.victronenergy.dcload.pylontechmonitor_rs232",
+            "com.victronenergy.battery.pylontechmonitor_rs232",
             config.service_name,
         )
 
