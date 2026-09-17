@@ -1,3 +1,23 @@
 #!/bin/sh
+set -eu
+
+# serial-starter may link this logger directly to the persistent template.
+# Derive the TTY from the generated service name when possible so each port
+# writes to its own log directory.
+SERVICE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+DEVICE_NAME=${SERVICE_DIR##*.}
+if ! printf '%s\n' "$DEVICE_NAME" | grep -q '^tty'; then
+    for SERVICE_PATH in /service/dbus-pylonserial.*; do
+        SERVICE_NAME=${SERVICE_PATH##*.}
+        case "$SERVICE_NAME" in
+            tty*) DEVICE_NAME=$SERVICE_NAME; break ;;
+        esac
+    done
+fi
+case "$DEVICE_NAME" in
+    tty*) LOG_DIR="/data/log/dbus-pylonserial.$DEVICE_NAME" ;;
+    *) LOG_DIR="/data/log/dbus-pylonserial.TTY" ;;
+esac
+
 exec 2>&1
-exec multilog t s25000 n4 /data/log/dbus-pylonserial.TTY
+exec multilog t s25000 n4 "$LOG_DIR"

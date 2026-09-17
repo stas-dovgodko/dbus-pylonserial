@@ -22,6 +22,13 @@ class SerialStarterTest(unittest.TestCase):
         self.assertIn('--serial-port "$SERIAL_PORT"', run_script)
         self.assertIn("--serial-starter", run_script)
 
+        log_script = (ROOT / "serial-starter" / "service" / "log" / "run").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("for SERVICE_PATH in /service/dbus-pylonserial.*", log_script)
+        self.assertIn('LOG_DIR="/data/log/dbus-pylonserial.$DEVICE_NAME"', log_script)
+        self.assertIn('exec multilog t s25000 n4 "$LOG_DIR"', log_script)
+
     def test_uninstaller_preserves_application_and_config(self):
         uninstaller = (ROOT / "uninstall.sh").read_text(encoding="utf-8")
 
