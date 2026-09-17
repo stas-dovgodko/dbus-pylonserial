@@ -5,7 +5,6 @@ APP_NAME="dbus-pylontech-console"
 APP_DIR="/data/apps/$APP_NAME"
 SERVICE_LINK="/service/$APP_NAME"
 SERIAL_STARTER_CONF="/data/conf/serial-starter.d/dbus-pylonserial.conf"
-GUI_APP_LINK="/data/apps/enabled/$APP_NAME"
 PANEL_WEB_ROOT="/var/www/venus/gui-v2/pylontech-panel"
 SOURCE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 SERIAL_STARTER_DEVICE=""
@@ -122,12 +121,15 @@ validate_udev_value() {
 }
 
 mkdir -p "$APP_DIR"
+# Remove artifacts from the retired GUI v2 plugin before refreshing the app.
 rm -rf "$APP_DIR/pylontech_dbus" "$APP_DIR/serial-starter" \
     "$APP_DIR/gui-v2-source" "$APP_DIR/gui-v2"
+if [ -L "/data/apps/enabled/$APP_NAME" ] \
+    && [ "$(readlink -f "/data/apps/enabled/$APP_NAME")" = "$(readlink -f "$APP_DIR")" ]; then
+    rm -f "/data/apps/enabled/$APP_NAME"
+fi
 cp -R "$SOURCE_DIR/pylontech_dbus" "$APP_DIR/"
 cp -R "$SOURCE_DIR/serial-starter" "$APP_DIR/"
-cp -R "$SOURCE_DIR/gui-v2-source" "$APP_DIR/"
-cp -R "$SOURCE_DIR/gui-v2" "$APP_DIR/"
 cp "$SOURCE_DIR/main.py" "$APP_DIR/main.py"
 cp "$SOURCE_DIR/probe.py" "$APP_DIR/probe.py"
 cp "$SOURCE_DIR/verify-isolation.sh" "$APP_DIR/verify-isolation.sh"
@@ -150,45 +152,6 @@ if grep -Eq '^[[:space:]]*service_name[[:space:]]*=[[:space:]]*com\.victronenerg
     sed -i -E 's#^[[:space:]]*service_name[[:space:]]*=.*com\.victronenergy\.(pylontechmonitor\.|unsupported\.pylontechmonitor_|telemetry\.pylontechmonitor_)([A-Za-z0-9_]+)[[:space:]]*$#service_name = com.victronenergy.dcload.pylontechmonitor_\2#' "$APP_DIR/config.ini"
     echo "Migrated the service to the non-battery dcload Device List namespace."
 fi
-
-install_gui_v2_plugin() {
-    compiler="/opt/victronenergy/gui-v2/gui-v2-plugin-compiler.py"
-    plugin_source="$APP_DIR/gui-v2-source/PylontechMonitor"
-    plugin_json="$plugin_source/PylontechMonitor.json"
-    plugin_output="$APP_DIR/gui-v2/PylontechMonitor.json"
-
-    if [ -f "$compiler" ] && command -v python3 >/dev/null 2>&1; then
-        if (cd "$plugin_source" && python3 "$compiler" \
-            --name PylontechMonitor \
-            --version 0.3.0 \
-            --min-required-version v1.2.13 \
-            --devicelist 0xF0A1 PylontechMonitor.qml 'Pylontech battery data'); then
-            mkdir -p "$APP_DIR/gui-v2"
-            cp "$plugin_json" "$plugin_output"
-        elif [ ! -f "$plugin_output" ]; then
-            echo "GUI v2 plugin compilation failed; the generic device entry remains available." >&2
-        fi
-    elif [ ! -f "$plugin_output" ]; then
-        echo "GUI v2 plugin compiler is unavailable; the generic device entry remains available." >&2
-    fi
-
-    if [ -f "$plugin_output" ]; then
-        mkdir -p /data/apps/enabled
-        if [ -e "$GUI_APP_LINK" ] && [ ! -L "$GUI_APP_LINK" ]; then
-            echo "Leaving foreign GUI application path untouched: $GUI_APP_LINK" >&2
-            return
-        fi
-        if [ -L "$GUI_APP_LINK" ] \
-            && [ "$(readlink -f "$GUI_APP_LINK")" != "$(readlink -f "$APP_DIR")" ]; then
-            echo "Leaving foreign GUI application symlink untouched: $GUI_APP_LINK" >&2
-            return
-        fi
-        ln -sfn "$APP_DIR" "$GUI_APP_LINK"
-        echo "Installed the GUI v2 Pylontech Device List plugin."
-    fi
-}
-
-install_gui_v2_plugin
 
 if [ -d "/var/www/venus/gui-v2" ] \
     && mkdir -p "$PANEL_WEB_ROOT" 2>/dev/null \

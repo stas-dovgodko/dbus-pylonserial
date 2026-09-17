@@ -164,7 +164,7 @@ dbus -y com.victronenergy.battery.pylontechmonitor_rs232_1 /Modules/1/Cycles Get
 dbus -y com.victronenergy.battery.pylontechmonitor_rs232_1 /Modules/1/Serial GetValue
 ```
 
-## Device List and GUI v2
+## Device list and standalone panel
 
 The default service uses the `battery` device type so it appears in the normal
 Venus battery page. Each online Pylontech module is exposed as its own
@@ -172,18 +172,6 @@ read-only service (for example,
 `...pylontechmonitor_rs232_1`), with the module's complete parameter tree and
 cell paths under `/Modules/1/...`. The visible device name is built from the
 BMS-reported manufacturer, model, and serial number.
-
-The installer also enables the bundled GUI v2 plugin. It adds a `Pylontech
-battery data` page containing bank values, module pages, cycles, serial
-numbers, firmware and hardware identity, SOH, lifetime counters, voltage
-spread, temperatures, and detailed cell pages. The bundled plugin
-requires GUI v2 1.2.13 or newer. On older Venus OS releases or when a browser
-Remote Console cannot load filesystem plugins, the generic device entry still
-works; update Venus OS or use the local GUI to obtain the full custom page.
-After updating an existing installation, run the installer again so it copies
-the plugin bundle and refreshes `/data/apps/enabled/dbus-pylontech-console`.
-
-## Standalone browser panel
 
 The installer can place a standalone telemetry panel into the existing GUI-v2
 web root, without starting another HTTP service. When `/var/www/venus/gui-v2`

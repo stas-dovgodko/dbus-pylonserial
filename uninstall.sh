@@ -8,7 +8,6 @@ TEMPLATE_SOURCE="$APP_DIR/serial-starter/service"
 RULE_LINK="/etc/udev/rules.d/zz-dbus-pylonserial.rules"
 RULE_SOURCE="$APP_DIR/udev/zz-dbus-pylonserial.rules"
 SERIAL_STARTER_CONF="/data/conf/serial-starter.d/dbus-pylonserial.conf"
-GUI_APP_LINK="/data/apps/enabled/dbus-pylontech-console"
 PANEL_WEB_ROOT="/var/www/venus/gui-v2/pylontech-panel"
 RC_LOCAL="/data/rc.local"
 DIRECT_HOOK="ln -sfn $APP_DIR/service $DIRECT_SERVICE_LINK"
@@ -61,8 +60,6 @@ fi
 
 remove_owned_link "$TEMPLATE_LINK" "$TEMPLATE_SOURCE"
 remove_owned_link "$RULE_LINK" "$RULE_SOURCE"
-remove_owned_link "$GUI_APP_LINK" "$APP_DIR"
-
 if [ -f "$PANEL_WEB_ROOT/.pylontech-panel" ]; then
     rm -rf "$PANEL_WEB_ROOT"
 fi
