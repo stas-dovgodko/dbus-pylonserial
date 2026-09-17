@@ -198,11 +198,18 @@ the plugin bundle and refreshes `/data/apps/enabled/dbus-pylontech-console`.
 
 ## Standalone browser panel
 
-The installer can place a standalone panel into the existing GUI-v2 web root,
-without starting another HTTP service. When `/var/www/venus/gui-v2` is
-available, open `https://<cerbo-address>/gui-v2/pylontech-panel/` in a browser.
-The first version is a connectivity stub; it will be extended with the full
-D-Bus module and cell tree.
+The installer can place a standalone telemetry panel into the existing GUI-v2
+web root, without starting another HTTP service. When `/var/www/venus/gui-v2`
+is available, open `https://<cerbo-address>/gui-v2/pylontech-panel/` in a
+browser. The panel reads the existing Venus MQTT-over-WebSocket endpoint at
+`/websocket-mqtt` and shows the bank summary, individual Pylontech modules,
+cell values, and the complete read-only D-Bus tree. It subscribes only to
+`dcload` and `battery` telemetry topics and does not send control commands.
+
+The page requires a Venus OS web server with the MQTT WebSocket endpoint
+enabled. For local development or a different host, pass `?host=<venus-ip>`;
+older firmware may require `?host=<venus-ip>&port=9001&path=%02%03` for the
+direct FlashMQ WebSocket endpoint.
 
 ## Production installation with Venus OS serial-starter
 
