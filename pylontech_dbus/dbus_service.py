@@ -614,6 +614,7 @@ class PylontechModuleServices:
     def __init__(self, config: DriverConfig) -> None:
         self.config = config
         self._services = {}
+        self._buses = {}
 
     def _service_for(self, module: ModuleReading) -> PylontechDbusService:
         service = self._services.get(module.number)
@@ -634,8 +635,19 @@ class PylontechModuleServices:
                 ),
             ),
         )
-        service = PylontechDbusService(module_config)
+        bus = None
+        try:
+            import dbus
+
+            # Each VeDbusService exports the root object path "/". Use a
+            # private connection per module so those handlers do not collide.
+            bus = dbus.SystemBus(private=True)
+        except Exception:
+            pass
+        service = PylontechDbusService(module_config, bus=bus)
         self._services[module.number] = service
+        if bus is not None:
+            self._buses[module.number] = bus
         return service
 
     def publish(self, reading: BankReading) -> None:
