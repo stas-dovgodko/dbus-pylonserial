@@ -16,6 +16,8 @@ class SerialStarterTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn('SERVICE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)', run_script)
+        self.assertIn("for SERVICE_PATH in /service/dbus-pylonserial.*", run_script)
+        self.assertIn("SERVICE_NAME=${SERVICE_PATH##*.}", run_script)
         self.assertIn('tty*) SERIAL_PORT="/dev/$DEVICE_NAME"', run_script)
         self.assertIn('--serial-port "$SERIAL_PORT"', run_script)
         self.assertIn("--serial-starter", run_script)

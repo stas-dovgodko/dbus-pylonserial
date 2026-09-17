@@ -9,6 +9,17 @@ export PYTHONPATH="/opt/victronenergy/dbus-systemcalc-py/ext/velib_python${PYTHO
 # name, so derive the port from it instead of relying on substitution.
 SERVICE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 DEVICE_NAME=${SERVICE_DIR##*.}
+if ! printf '%s\n' "$DEVICE_NAME" | grep -q '^tty'; then
+    # Some Venus releases link /service/dbus-pylonserial.<tty> directly to
+    # the persistent template instead of creating a runtime copy. In that
+    # layout, recover the TTY from the service link name.
+    for SERVICE_PATH in /service/dbus-pylonserial.*; do
+        SERVICE_NAME=${SERVICE_PATH##*.}
+        case "$SERVICE_NAME" in
+            tty*) DEVICE_NAME=$SERVICE_NAME; break ;;
+        esac
+    done
+fi
 case "$DEVICE_NAME" in
     tty*) SERIAL_PORT="/dev/$DEVICE_NAME" ;;
     *) SERIAL_PORT="/dev/TTY" ;;
