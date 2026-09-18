@@ -122,7 +122,8 @@ Useful paths include:
 /Dc/0/Voltage                     bank voltage
 /Dc/0/Current                     bank current
 /Dc/0/Power                       bank power
-/Capacity                         current bank capacity when configured
+/Capacity                         live available bank capacity in Ah
+/InstalledCapacity                passport/nominal bank capacity in Ah
 /Modules/<n>/Soh                  module SOH
 /Modules/<n>/RemainingCapacity    module current capacity
 /Modules/<n>/Cycles               module cycle count
@@ -133,9 +134,12 @@ Useful paths include:
 ```
 
 `Coulomb` in the Pylontech `bat N` response is published as
-`RemainingCapacity` in Ah. A module's current capacity is derived from the
-cell telemetry; configured nominal capacity is separate and is only used for
-`/InstalledCapacity` when `battery.module_capacity_ah` is set.
+`RemainingCapacity` in Ah. The bank `/Capacity` is the sum of the live module
+capacities once details are available; it falls back to SOC multiplied by the
+nominal capacity when details are incomplete. `/InstalledCapacity` uses the
+configured `battery.module_capacity_ah` when set, otherwise it derives the
+passport capacity from each module's `Specification` (for example,
+`48V/50AH`).
 
 ## Read-only command scope
 

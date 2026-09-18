@@ -562,6 +562,10 @@ class PylontechDbusService:
         remaining_capacity: Optional[float] = None
         if capacity_per_module > 0:
             installed_capacity = round(capacity_per_module * expected, 2)
+        else:
+            installed_capacity = reading.nominal_capacity_ah
+        remaining_capacity = reading.remaining_capacity_ah
+        if remaining_capacity is None and installed_capacity is not None:
             remaining_capacity = round(installed_capacity * reading.soc / 100.0, 2)
 
         self._set("/Connected", 1)

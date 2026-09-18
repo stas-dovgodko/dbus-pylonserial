@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, Mapping, Optional, Tuple
+
+
+_CAPACITY_RE = re.compile(r"(?i)(?<![a-z])([0-9]+(?:\.[0-9]+)?)\s*ah\b")
 
 
 @dataclass(frozen=True)
@@ -212,6 +216,30 @@ class BankReading:
         return max(values) if values else None
 
     @property
+    def nominal_capacity_ah(self) -> Optional[float]:
+        """Return the summed passport capacity when every module reports it."""
+
+        capacities = []
+        for module in self.modules:
+            specification = module.metadata.specification if module.metadata else None
+            match = _CAPACITY_RE.search(specification or "")
+            if match is None:
+                return None
+            capacities.append(float(match.group(1)))
+        return round(sum(capacities), 2) if capacities else None
+
+    @property
+    def remaining_capacity_ah(self) -> Optional[float]:
+        """Return the summed live Coulomb capacity when all modules have details."""
+
+        capacities = []
+        for module in self.modules:
+            if not module.cells:
+                return None
+            capacities.append(min(cell.remaining_capacity_ah for cell in module.cells))
+        return round(sum(capacities), 2) if capacities else None
+
+    @property
     def balancing(self) -> Optional[int]:
         states = [
             cell.balancing
@@ -297,6 +325,8 @@ class BankReading:
             "temperature_low": self.temperature_low,
             "temperature_high": self.temperature_high,
             "mos_temperature": self.mos_temperature,
+            "nominal_capacity_ah": self.nominal_capacity_ah,
+            "remaining_capacity_ah": self.remaining_capacity_ah,
             "balancing": self.balancing,
             "cell_voltage_low": self.cell_voltage_low,
             "cell_voltage_low_id": self.cell_voltage_low_id,

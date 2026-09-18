@@ -179,6 +179,40 @@ service_name=com.victronenergy.dcload.pylontechmonitor_rs232
         self.assertEqual(1, first._service.values["/Modules/1/Online"])
         self.assertEqual(1, fourth._service.values["/Modules/1/Online"])
 
+    def test_capacity_aggregates_live_cells_and_passport_specification(self):
+        reading = parse_pwr_response(PWR_RESPONSE, expected_modules=4)
+        modules = []
+        for module in reading.modules:
+            modules.append(
+                replace(
+                    module,
+                    metadata=ModuleMetadata(
+                        address=module.number,
+                        specification="48V/50AH",
+                    ),
+                    cells=(
+                        CellReading(
+                            number=1,
+                            voltage=3.3,
+                            current=-1.0,
+                            temperature=25.0,
+                            soc=70.0,
+                            remaining_capacity_ah=45.0 + module.number,
+                            balancing=False,
+                            base_state="Dischg",
+                            voltage_state="Normal",
+                            current_state="Normal",
+                            temperature_state="Normal",
+                        ),
+                    ),
+                )
+            )
+
+        bank = BankReading.from_modules(modules)
+
+        self.assertEqual(200.0, bank.nominal_capacity_ah)
+        self.assertEqual(190.0, bank.remaining_capacity_ah)
+
     def test_module_identity_uses_manufacturer_model_and_serial(self):
         config = load_config(self.path)
         services = PylontechModuleServices(config)
