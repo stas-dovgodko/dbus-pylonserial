@@ -4,10 +4,11 @@ set -eu
 # serial-starter may link this logger directly to the persistent template.
 # Derive the TTY from the generated service name when possible so each port
 # writes to its own log directory.
-SERVICE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+SERVICE_DIR=$(CDPATH= cd -- "$(dirname -- "$(dirname -- "$0")")" && pwd)
 DEVICE_NAME=${SERVICE_DIR##*.}
 RUN_DIR=$(pwd)
-RUN_DEVICE_NAME=${RUN_DIR##*.}
+RUN_SERVICE_DIR=${RUN_DIR%/log}
+RUN_DEVICE_NAME=${RUN_SERVICE_DIR##*.}
 case "$RUN_DEVICE_NAME" in
     tty*) DEVICE_NAME=$RUN_DEVICE_NAME ;;
 esac

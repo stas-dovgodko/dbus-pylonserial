@@ -28,6 +28,8 @@ class SerialStarterTest(unittest.TestCase):
         log_script = (ROOT / "serial-starter" / "service" / "log" / "run").read_text(
             encoding="utf-8"
         )
+        self.assertIn('dirname -- "$(dirname -- "$0")"', log_script)
+        self.assertIn("RUN_SERVICE_DIR=${RUN_DIR%/log}", log_script)
         self.assertIn('for CANDIDATE in "${SERIAL_PORT:-}" "${TTY:-}"', log_script)
         self.assertIn("RUN_DIR=$(pwd)", log_script)
         self.assertIn('LOG_DIR="/data/log/dbus-pylonserial.$DEVICE_NAME"', log_script)
