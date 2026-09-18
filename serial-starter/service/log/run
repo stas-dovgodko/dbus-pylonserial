@@ -6,7 +6,7 @@ set -eu
 # writes to its own log directory.
 SERVICE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 DEVICE_NAME=${SERVICE_DIR##*.}
-RUN_DIR=$(pwd -P)
+RUN_DIR=$(pwd)
 RUN_DEVICE_NAME=${RUN_DIR##*.}
 case "$RUN_DEVICE_NAME" in
     tty*) DEVICE_NAME=$RUN_DEVICE_NAME ;;

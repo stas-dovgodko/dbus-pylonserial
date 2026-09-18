@@ -16,7 +16,7 @@ class SerialStarterTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn('SERVICE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)', run_script)
-        self.assertIn("RUN_DIR=$(pwd -P)", run_script)
+        self.assertIn("RUN_DIR=$(pwd)", run_script)
         self.assertIn('for CANDIDATE in "${SERIAL_PORT:-}" "${TTY:-}"', run_script)
         self.assertIn('tty*) SERIAL_PORT="/dev/$DEVICE_NAME"', run_script)
         self.assertIn("Unable to resolve the serial TTY", run_script)
@@ -27,7 +27,7 @@ class SerialStarterTest(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn('for CANDIDATE in "${SERIAL_PORT:-}" "${TTY:-}"', log_script)
-        self.assertIn("RUN_DIR=$(pwd -P)", log_script)
+        self.assertIn("RUN_DIR=$(pwd)", log_script)
         self.assertIn('LOG_DIR="/data/log/dbus-pylonserial.$DEVICE_NAME"', log_script)
         self.assertIn("Unable to resolve the serial TTY", log_script)
         self.assertIn('exec multilog t s25000 n4 "$LOG_DIR"', log_script)
