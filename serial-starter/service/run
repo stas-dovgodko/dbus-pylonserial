@@ -9,6 +9,11 @@ export PYTHONPATH="/opt/victronenergy/dbus-systemcalc-py/ext/velib_python${PYTHO
 # name, so derive the port from it instead of relying on substitution.
 SERVICE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 DEVICE_NAME=${SERVICE_DIR##*.}
+RUN_DIR=$(pwd -P)
+RUN_DEVICE_NAME=${RUN_DIR##*.}
+case "$RUN_DEVICE_NAME" in
+    tty*) DEVICE_NAME=$RUN_DEVICE_NAME ;;
+esac
 if ! printf '%s\n' "$DEVICE_NAME" | grep -q '^tty'; then
     # Some Venus releases pass the port through an environment variable when
     # executing a persistent template instead of creating a runtime copy.
