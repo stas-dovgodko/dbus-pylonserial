@@ -207,6 +207,30 @@ class BankReading:
         return max(values) if values else None
 
     @property
+    def temperature_low_sensor(self) -> Optional[int]:
+        """Return the sensor ID belonging to the lowest explicit temperature."""
+
+        candidates = [
+            (item.temperature_low, item.temperature_low_sensor)
+            for item in self.modules
+            if item.temperature_low is not None
+            and item.temperature_low_sensor is not None
+        ]
+        return min(candidates, key=lambda item: item[0])[1] if candidates else None
+
+    @property
+    def temperature_high_sensor(self) -> Optional[int]:
+        """Return the sensor ID belonging to the highest explicit temperature."""
+
+        candidates = [
+            (item.temperature_high, item.temperature_high_sensor)
+            for item in self.modules
+            if item.temperature_high is not None
+            and item.temperature_high_sensor is not None
+        ]
+        return max(candidates, key=lambda item: item[0])[1] if candidates else None
+
+    @property
     def mos_temperature(self) -> Optional[float]:
         values = [
             item.mos_temperature
@@ -324,6 +348,8 @@ class BankReading:
             "temperature": self.temperature,
             "temperature_low": self.temperature_low,
             "temperature_high": self.temperature_high,
+            "temperature_low_sensor": self.temperature_low_sensor,
+            "temperature_high_sensor": self.temperature_high_sensor,
             "mos_temperature": self.mos_temperature,
             "nominal_capacity_ah": self.nominal_capacity_ah,
             "remaining_capacity_ah": self.remaining_capacity_ah,

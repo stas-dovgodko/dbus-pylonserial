@@ -157,7 +157,9 @@ class PylontechDbusService:
         self._add("/Settings/HasTemperature", 1)
         self._add("/System/Soh", None, _format_value("%", 1))
         self._add("/System/MinCellTemperature", None, _format_value("C", 1))
+        self._add("/System/MinTemperatureCellId", None)
         self._add("/System/MaxCellTemperature", None, _format_value("C", 1))
+        self._add("/System/MaxTemperatureCellId", None)
         self._add("/System/MOSTemperature", None, _format_value("C", 1))
         self._add("/System/MinCellVoltage", None, _format_value("V", 3))
         self._add("/System/MinVoltageCellId", None)
@@ -579,7 +581,19 @@ class PylontechDbusService:
         self._set("/Dc/0/Temperature", reading.temperature)
         self._set("/System/Soh", reading.soh)
         self._set("/System/MinCellTemperature", reading.temperature_low)
+        self._set(
+            "/System/MinTemperatureCellId",
+            "C{}".format(reading.temperature_low_sensor)
+            if reading.temperature_low_sensor is not None
+            else None,
+        )
         self._set("/System/MaxCellTemperature", reading.temperature_high)
+        self._set(
+            "/System/MaxTemperatureCellId",
+            "C{}".format(reading.temperature_high_sensor)
+            if reading.temperature_high_sensor is not None
+            else None,
+        )
         self._set("/System/MOSTemperature", reading.mos_temperature)
         self._set("/System/MinCellVoltage", reading.cell_voltage_low)
         self._set(
@@ -643,7 +657,9 @@ class PylontechDbusService:
             "/Capacity",
             "/System/Soh",
             "/System/MinCellTemperature",
+            "/System/MinTemperatureCellId",
             "/System/MaxCellTemperature",
+            "/System/MaxTemperatureCellId",
             "/System/MOSTemperature",
             "/System/MinCellVoltage",
             "/System/MinVoltageCellId",

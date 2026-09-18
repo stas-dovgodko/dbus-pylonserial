@@ -116,7 +116,9 @@ Useful paths include:
 /Soh                              aggregate state of health
 /System/Soh                       aggregate SOH when available
 /System/MinCellTemperature        lowest reported battery temperature
+/System/MinTemperatureCellId      cell ID associated with that minimum
 /System/MaxCellTemperature        highest reported battery temperature
+/System/MaxTemperatureCellId      cell ID associated with that maximum
 /System/MOSTemperature             highest reported MOS temperature
 /Balancing                         1 when any reported cell is balancing
 /Dc/0/Voltage                     bank voltage

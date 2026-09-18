@@ -81,6 +81,10 @@ pylon>"""
 
         module = parse_pwr_response(response).modules[0]
 
+        self.assertEqual(27.0, module.temperature_low)
+        self.assertEqual(12, module.temperature_low_sensor)
+        self.assertEqual(27.8, module.temperature_high)
+        self.assertEqual(0, module.temperature_high_sensor)
         self.assertEqual(3.309, module.cell_voltage_low)
         self.assertEqual(10, module.cell_voltage_high_id)
         self.assertEqual("2026-09-17 05:08:49", module.timestamp)
