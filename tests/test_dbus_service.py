@@ -128,6 +128,11 @@ service_name=com.victronenergy.dcload.pylontechmonitor_rs232
         self.assertEqual(-13.08, values["/Dc/0/Current"])
         self.assertEqual(400.0, values["/InstalledCapacity"])
         self.assertEqual(274.0, values["/Capacity"])
+        self.assertEqual(93, values["/Soh"])
+        self.assertEqual(27.0, values["/System/MinCellTemperature"])
+        self.assertEqual(30.0, values["/System/MaxCellTemperature"])
+        self.assertIsNone(values["/System/MOSTemperature"])
+        self.assertEqual(1, values["/Balancing"])
         self.assertEqual(1, values["/Modules/4/Online"])
         self.assertEqual(0xF0A1, values["/ProductId"])
         self.assertIn("4/4 modules", values["/Reason"])
@@ -151,6 +156,9 @@ service_name=com.victronenergy.dcload.pylontechmonitor_rs232
         self.assertEqual(0, values["/Connected"])
         self.assertEqual(2, values["/Alarms/BmsCable"])
         self.assertIsNone(values["/Dc/0/Voltage"])
+        self.assertIsNone(values["/Soh"])
+        self.assertIsNone(values["/System/MinCellTemperature"])
+        self.assertIsNone(values["/System/MaxCellTemperature"])
         self.assertEqual(4, values["/System/NrOfModulesOffline"])
 
     def test_exposes_each_module_as_a_separate_service(self):

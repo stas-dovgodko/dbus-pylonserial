@@ -179,6 +179,51 @@ class BankReading:
         return max(item.temperature for item in self.modules)
 
     @property
+    def temperature_low(self) -> Optional[float]:
+        """Return the lowest known module/sensor temperature in the bank."""
+
+        values = [
+            item.temperature_low
+            if item.temperature_low is not None
+            else item.temperature
+            for item in self.modules
+        ]
+        return min(values) if values else None
+
+    @property
+    def temperature_high(self) -> Optional[float]:
+        """Return the highest known module/sensor temperature in the bank."""
+
+        values = [
+            item.temperature_high
+            if item.temperature_high is not None
+            else item.temperature
+            for item in self.modules
+        ]
+        return max(values) if values else None
+
+    @property
+    def mos_temperature(self) -> Optional[float]:
+        values = [
+            item.mos_temperature
+            for item in self.modules
+            if item.mos_temperature is not None
+        ]
+        return max(values) if values else None
+
+    @property
+    def balancing(self) -> Optional[int]:
+        states = [
+            cell.balancing
+            for module in self.modules
+            for cell in module.cells
+            if cell.balancing is not None
+        ]
+        if not states:
+            return None
+        return int(any(states))
+
+    @property
     def soh(self) -> Optional[float]:
         values = [
             item.statistics.soh
@@ -249,6 +294,10 @@ class BankReading:
             "soc": self.soc,
             "soh": self.soh,
             "temperature": self.temperature,
+            "temperature_low": self.temperature_low,
+            "temperature_high": self.temperature_high,
+            "mos_temperature": self.mos_temperature,
+            "balancing": self.balancing,
             "cell_voltage_low": self.cell_voltage_low,
             "cell_voltage_low_id": self.cell_voltage_low_id,
             "cell_voltage_high": self.cell_voltage_high,

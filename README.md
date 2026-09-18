@@ -113,7 +113,12 @@ Useful paths include:
 
 ```text
 /Soc                              aggregate state of charge
+/Soh                              aggregate state of health
 /System/Soh                       aggregate SOH when available
+/System/MinCellTemperature        lowest reported battery temperature
+/System/MaxCellTemperature        highest reported battery temperature
+/System/MOSTemperature             highest reported MOS temperature
+/Balancing                         1 when any reported cell is balancing
 /Dc/0/Voltage                     bank voltage
 /Dc/0/Current                     bank current
 /Dc/0/Power                       bank power
