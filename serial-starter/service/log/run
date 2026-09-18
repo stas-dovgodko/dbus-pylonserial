@@ -19,6 +19,22 @@ if ! printf '%s\n' "$DEVICE_NAME" | grep -q '^tty'; then
         esac
     done
 fi
+if ! printf '%s\n' "$DEVICE_NAME" | grep -q '^tty'; then
+    TEMPLATE_TARGET=$(readlink -f "$SERVICE_DIR" 2>/dev/null || true)
+    MATCHED_DEVICE=""
+    for SERVICE_PATH in /service/dbus-pylonserial.tty*; do
+        [ -e "$SERVICE_PATH" ] || continue
+        SERVICE_TARGET=$(readlink -f "$SERVICE_PATH" 2>/dev/null || true)
+        [ -n "$TEMPLATE_TARGET" ] && [ "$SERVICE_TARGET" = "$TEMPLATE_TARGET" ] || continue
+        CANDIDATE=${SERVICE_PATH##*.}
+        if [ -n "$MATCHED_DEVICE" ] && [ "$MATCHED_DEVICE" != "$CANDIDATE" ]; then
+            echo "Multiple dbus-pylonserial services point to the same template" >&2
+            exit 1
+        fi
+        MATCHED_DEVICE=$CANDIDATE
+    done
+    [ -n "$MATCHED_DEVICE" ] && DEVICE_NAME=$MATCHED_DEVICE
+fi
 case "$DEVICE_NAME" in
     tty*) LOG_DIR="/data/log/dbus-pylonserial.$DEVICE_NAME" ;;
     *)

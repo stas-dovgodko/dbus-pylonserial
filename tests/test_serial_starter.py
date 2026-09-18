@@ -20,6 +20,8 @@ class SerialStarterTest(unittest.TestCase):
         self.assertIn('for CANDIDATE in "${SERIAL_PORT:-}" "${TTY:-}"', run_script)
         self.assertIn('tty*) SERIAL_PORT="/dev/$DEVICE_NAME"', run_script)
         self.assertIn("Unable to resolve the serial TTY", run_script)
+        self.assertIn("TEMPLATE_TARGET=$(readlink -f \"$SERVICE_DIR\"", run_script)
+        self.assertIn("Multiple dbus-pylonserial services", run_script)
         self.assertIn('--serial-port "$SERIAL_PORT"', run_script)
         self.assertIn("--serial-starter", run_script)
 
@@ -30,6 +32,7 @@ class SerialStarterTest(unittest.TestCase):
         self.assertIn("RUN_DIR=$(pwd)", log_script)
         self.assertIn('LOG_DIR="/data/log/dbus-pylonserial.$DEVICE_NAME"', log_script)
         self.assertIn("Unable to resolve the serial TTY", log_script)
+        self.assertIn("TEMPLATE_TARGET=$(readlink -f \"$SERVICE_DIR\"", log_script)
         self.assertIn('exec multilog t s25000 n4 "$LOG_DIR"', log_script)
 
     def test_uninstaller_preserves_application_and_config(self):
