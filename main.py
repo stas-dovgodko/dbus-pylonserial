@@ -108,6 +108,8 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
     poll_started_at = None
     last_success_at = None
     stopping = False
+    stop_started_at = None
+    shutdown_timeout = max(10.0, min(config.poll_timeout, 30.0))
 
     def publish(reading, elapsed):
         service.publish(reading)
@@ -119,6 +121,33 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
             reading.soc,
             elapsed,
         )
+
+    def close_console_in_background():
+        """Close the serial adapter without blocking the event loop."""
+
+        try:
+            console.close()
+        except Exception:
+            LOGGER.exception("Failed to close the serial console")
+
+    def request_shutdown(code):
+        """Request a prompt shutdown and leave a hard watchdog as fallback."""
+
+        nonlocal exit_code, stopping, stop_started_at
+        if code:
+            exit_code = code
+        if stopping:
+            return
+        stopping = True
+        stop_started_at = time.monotonic()
+        LOGGER.info("Stopping")
+        # Do not let a wedged USB/serial close prevent GLib from returning.
+        mainloop.quit()
+        threading.Thread(
+            target=close_console_in_background,
+            name="pylontech-close",
+            daemon=True,
+        ).start()
 
     def read_bank(include_details):
         return console.read_bank(include_details=include_details)
@@ -159,7 +188,6 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
         return False
 
     def watchdog():
-        nonlocal exit_code
         if stopping or not poll_in_flight or poll_started_at is None:
             return not stopping
         elapsed = time.monotonic() - poll_started_at
@@ -175,18 +203,29 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
             if last_success_at is None
             else "%.1fs ago" % (time.monotonic() - last_success_at),
         )
-        console.close()
-        exit_code = 1
-        # The worker is deliberately a daemon thread. It cannot keep this
-        # process alive after the main loop exits if a USB driver ignores close.
-        mainloop.quit()
+        request_shutdown(1)
         return False
 
     def hard_watchdog():
         """Exit even when the GLib/D-Bus thread is blocked in native code."""
 
-        while not stopping:
+        while True:
             time.sleep(1.0)
+            if stopping:
+                if (
+                    stop_started_at is not None
+                    and time.monotonic() - stop_started_at > shutdown_timeout
+                ):
+                    LOGGER.error(
+                        "Shutdown exceeded %.1fs; forcing process exit for "
+                        "supervisor restart",
+                        shutdown_timeout,
+                    )
+                    # os._exit is intentional: a native USB close or GLib
+                    # teardown may prevent the main thread from returning.
+                    logging.shutdown()
+                    os._exit(1)
+                continue
             started_at = poll_started_at
             if started_at is None:
                 continue
@@ -199,10 +238,6 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
                 config.poll_timeout,
                 elapsed,
             )
-            try:
-                console.close()
-            except Exception:
-                pass
             # os._exit is intentional: the main thread may be blocked in a
             # native serial or D-Bus call and cannot process SIGTERM promptly.
             logging.shutdown()
@@ -243,13 +278,7 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
         return True
 
     def stop(_signum, _frame):
-        nonlocal stopping
-        if stopping:
-            return
-        stopping = True
-        LOGGER.info("Stopping")
-        console.close()
-        mainloop.quit()
+        request_shutdown(1 if serial_starter else 0)
 
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
