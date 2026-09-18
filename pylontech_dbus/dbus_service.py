@@ -139,6 +139,8 @@ class PylontechDbusService:
         self._add("/Serial", "console:{}".format(serial_port))
         self._add("/Manufacturer", "Pylontech")
         self._add("/Reason", "Waiting for Pylontech data")
+        self._add("/ConnectionInformation", "Serial console {}".format(serial_port))
+        self._add("/ErrorCode", 0)
 
         self._add("/Soc", None, _format_value("%", 1))
         self._add("/Dc/0/Voltage", None, _format_value("V", 2))
@@ -558,6 +560,7 @@ class PylontechDbusService:
             remaining_capacity = round(installed_capacity * reading.soc / 100.0, 2)
 
         self._set("/Connected", 1)
+        self._set("/ErrorCode", 0)
         self._set("/Alarms/BmsCable", 0)
         self._set("/Soc", reading.soc)
         self._set("/Dc/0/Voltage", reading.voltage)
@@ -611,6 +614,7 @@ class PylontechDbusService:
     def disconnect(self) -> None:
         expected = self.config.battery.expected_modules or self._last_module_count
         self._set("/Connected", 0)
+        self._set("/ErrorCode", 1)
         self._set("/Alarms/BmsCable", 2)
         self._set("/System/NrOfModulesOnline", 0)
         self._set("/System/NrOfModulesOffline", expected)

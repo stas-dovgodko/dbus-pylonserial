@@ -22,6 +22,8 @@ poll_interval = 5
 # Read info/stat/bat details less frequently than the live pwr summary.
 details_poll_interval = 60
 failure_threshold = 3
+# Exit and let serial-starter restart the process if one poll gets stuck.
+poll_timeout = 120
 device_instance = 288
 # Default: battery namespace exposes the standard battery page. The driver is
 # read-only and deliberately omits ESS/DVCC limit paths.

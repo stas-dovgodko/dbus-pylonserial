@@ -4,12 +4,12 @@
 from __future__ import annotations
 
 import argparse
-from concurrent.futures import ThreadPoolExecutor
 import json
 import logging
 import os
 import signal
 import sys
+import threading
 import time
 from dataclasses import replace
 
@@ -94,7 +94,6 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
     )
     mainloop = GLib.MainLoop()
     console = _console(config)
-    executor = ThreadPoolExecutor(max_workers=1)
     failures = 0
     exit_code = 0
     # Publish the first live pwr sample immediately, then enrich it with SOH,
@@ -106,30 +105,40 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
         else 0.0
     )
     poll_in_flight = False
+    poll_started_at = None
+    last_success_at = None
     stopping = False
 
-    def publish(reading):
+    def publish(reading, elapsed):
         service.publish(reading)
         LOGGER.info(
-            "Read %d modules: %.2f V, %.2f A, %.1f%%",
+            "Read %d modules: %.2f V, %.2f A, %.1f%% in %.3fs",
             len(reading.modules),
             reading.voltage,
             reading.current,
             reading.soc,
+            elapsed,
         )
 
     def read_bank(include_details):
-        return include_details, console.read_bank(include_details=include_details)
+        return console.read_bank(include_details=include_details)
 
-    def complete(future):
+    def complete(result):
         nonlocal exit_code, failures, next_details_poll, poll_in_flight
+        nonlocal poll_started_at, last_success_at
         poll_in_flight = False
+        poll_started_at = None
+        include_details, reading, error, elapsed = result
+        if stopping:
+            return False
         try:
-            include_details, reading = future.result()
+            if error is not None:
+                raise error
             if include_details:
                 next_details_poll = time.monotonic() + config.details_poll_interval
-            publish(reading)
+            publish(reading, elapsed)
             failures = 0
+            last_success_at = time.monotonic()
         except Exception:
             failures += 1
             LOGGER.exception(
@@ -137,15 +146,41 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
             )
             console.close()
             if failures >= config.failure_threshold:
-                service.disconnect()
-                if serial_starter:
-                    exit_code = 1
-                    mainloop.quit()
-                    return False
+                try:
+                    service.disconnect()
+                finally:
+                    if serial_starter:
+                        exit_code = 1
+                        mainloop.quit()
+                        return False
+        return False
+
+    def watchdog():
+        nonlocal exit_code
+        if stopping or not poll_in_flight or poll_started_at is None:
+            return not stopping
+        elapsed = time.monotonic() - poll_started_at
+        if elapsed <= config.poll_timeout:
+            return True
+
+        LOGGER.error(
+            "Serial poll exceeded watchdog limit of %.1fs (running %.1fs; "
+            "last success %s); exiting for supervisor restart",
+            config.poll_timeout,
+            elapsed,
+            "never"
+            if last_success_at is None
+            else "%.1fs ago" % (time.monotonic() - last_success_at),
+        )
+        console.close()
+        exit_code = 1
+        # The worker is deliberately a daemon thread. It cannot keep this
+        # process alive after the main loop exits if a USB driver ignores close.
+        mainloop.quit()
         return False
 
     def poll():
-        nonlocal poll_in_flight, next_details_poll
+        nonlocal poll_in_flight, next_details_poll, poll_started_at
         if stopping or poll_in_flight:
             return True
         include_details = (
@@ -155,10 +190,27 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
         if include_details:
             next_details_poll = time.monotonic() + config.details_poll_interval
         poll_in_flight = True
-        future = executor.submit(read_bank, include_details)
-        future.add_done_callback(
-            lambda completed: GLib.idle_add(complete, completed)
-        )
+        started_at = time.monotonic()
+        poll_started_at = started_at
+
+        def worker():
+            reading = None
+            error = None
+            try:
+                reading = read_bank(include_details)
+            except Exception as exc:
+                error = exc
+            elapsed = time.monotonic() - started_at
+            GLib.idle_add(
+                complete,
+                (include_details, reading, error, elapsed),
+            )
+
+        threading.Thread(
+            target=worker,
+            name="pylontech-poll",
+            daemon=True,
+        ).start()
         return True
 
     def stop(_signum, _frame):
@@ -176,9 +228,11 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
     # create a busy-loop while the worker is in flight.
     poll()
     GLib.timeout_add(int(config.poll_interval * 1000), poll)
+    GLib.timeout_add(1000, watchdog)
     LOGGER.info("D-Bus service %s started", config.service_name)
     mainloop.run()
-    executor.shutdown(wait=True)
+    if serial_starter and poll_in_flight:
+        return 1
     return exit_code
 
 

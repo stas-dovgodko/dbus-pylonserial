@@ -169,6 +169,7 @@ Important settings:
 | `driver.poll_interval` | Live `pwr` interval in seconds |
 | `driver.details_poll_interval` | `info`/`stat`/`bat` interval in seconds |
 | `driver.failure_threshold` | Consecutive failures before disconnect |
+| `driver.poll_timeout` | Watchdog limit for one serial poll; the process exits so serial-starter can restart it |
 | `driver.device_instance` | Unique Venus device instance |
 | `driver.service_name` | `battery` or isolated `dcload` namespace |
 
@@ -317,6 +318,28 @@ ps | grep '[s]upervise dbus-pylonserial.ttyUSB0'
 Terminate only the listed stale `supervise` PIDs, then activate the service once
 with `start-tty.sh` or by reconnecting the adapter. Do not run both activation
 methods for the same TTY.
+
+**The PID is alive but values stopped updating**
+
+Check both the supervisor and application logs. A live PID is not proof that a
+serial poll is still making progress: the driver has a watchdog and exits when
+one poll exceeds `driver.poll_timeout`, allowing serial-starter to restart it.
+
+```sh
+tail -n 100 /data/log/serial-starter/current | tai64nlocal
+tail -n 100 /data/log/dbus-pylonserial.ttyUSB0/current | tai64nlocal
+svstat /service/dbus-pylonserial.ttyUSB0
+readlink -f /service/dbus-pylonserial.ttyUSB0
+```
+
+The application log now records each poll duration and the watchdog message.
+If a USB adapter or kernel driver ignores `close()`, the poll worker is a
+daemon thread, so it cannot keep the process alive after the main loop exits.
+
+If the service cannot resolve its TTY, it now exits instead of silently using
+`/dev/TTY` or attaching the logger to an arbitrary stale service. Inspect
+`/data/log/serial-starter/current` and recreate the service for the actual
+adapter name (for example `ttyUSB0`).
 
 ## Uninstall
 

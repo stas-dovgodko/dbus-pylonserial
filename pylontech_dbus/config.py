@@ -44,6 +44,8 @@ class DriverConfig:
     device_instance: int
     service_name: str
     log_level: str
+    # Maximum time a single serial poll may occupy the worker thread.
+    poll_timeout: float = 120.0
 
 
 def load_config(path: str) -> DriverConfig:
@@ -82,6 +84,7 @@ def load_config(path: str) -> DriverConfig:
             "com.victronenergy.battery.pylontechmonitor_rs232",
         ).strip(),
         log_level=driver_section.get("log_level", "INFO").strip().upper(),
+        poll_timeout=driver_section.getfloat("poll_timeout", 120.0),
     )
 
     if not config.serial.port:
@@ -108,6 +111,8 @@ def load_config(path: str) -> DriverConfig:
         raise ValueError("driver.details_poll_interval cannot be negative")
     if config.failure_threshold < 1:
         raise ValueError("driver.failure_threshold must be at least 1")
+    if config.poll_timeout <= 0:
+        raise ValueError("driver.poll_timeout must be positive")
     if config.device_instance < 0:
         raise ValueError("driver.device_instance cannot be negative")
     if not SAFE_SERVICE_NAME_RE.match(config.service_name):

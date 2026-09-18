@@ -10,19 +10,21 @@ export PYTHONPATH="/opt/victronenergy/dbus-systemcalc-py/ext/velib_python${PYTHO
 SERVICE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 DEVICE_NAME=${SERVICE_DIR##*.}
 if ! printf '%s\n' "$DEVICE_NAME" | grep -q '^tty'; then
-    # Some Venus releases link /service/dbus-pylonserial.<tty> directly to
-    # the persistent template instead of creating a runtime copy. In that
-    # layout, recover the TTY from the service link name.
-    for SERVICE_PATH in /service/dbus-pylonserial.*; do
-        SERVICE_NAME=${SERVICE_PATH##*.}
-        case "$SERVICE_NAME" in
-            tty*) DEVICE_NAME=$SERVICE_NAME; break ;;
+    # Some Venus releases pass the port through an environment variable when
+    # executing a persistent template instead of creating a runtime copy.
+    for CANDIDATE in "${SERIAL_PORT:-}" "${TTY:-}"; do
+        case "$CANDIDATE" in
+            /dev/tty*) DEVICE_NAME=${CANDIDATE##*/}; break ;;
+            tty*) DEVICE_NAME=$CANDIDATE; break ;;
         esac
     done
 fi
 case "$DEVICE_NAME" in
     tty*) SERIAL_PORT="/dev/$DEVICE_NAME" ;;
-    *) SERIAL_PORT="/dev/TTY" ;;
+    *)
+        echo "Unable to resolve the serial TTY from the service directory" >&2
+        exit 1
+        ;;
 esac
 
 exec 2>&1

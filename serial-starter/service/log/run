@@ -7,16 +7,19 @@ set -eu
 SERVICE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 DEVICE_NAME=${SERVICE_DIR##*.}
 if ! printf '%s\n' "$DEVICE_NAME" | grep -q '^tty'; then
-    for SERVICE_PATH in /service/dbus-pylonserial.*; do
-        SERVICE_NAME=${SERVICE_PATH##*.}
-        case "$SERVICE_NAME" in
-            tty*) DEVICE_NAME=$SERVICE_NAME; break ;;
+    for CANDIDATE in "${SERIAL_PORT:-}" "${TTY:-}"; do
+        case "$CANDIDATE" in
+            /dev/tty*) DEVICE_NAME=${CANDIDATE##*/}; break ;;
+            tty*) DEVICE_NAME=$CANDIDATE; break ;;
         esac
     done
 fi
 case "$DEVICE_NAME" in
     tty*) LOG_DIR="/data/log/dbus-pylonserial.$DEVICE_NAME" ;;
-    *) LOG_DIR="/data/log/dbus-pylonserial.TTY" ;;
+    *)
+        echo "Unable to resolve the serial TTY for the logger" >&2
+        exit 1
+        ;;
 esac
 
 exec 2>&1
