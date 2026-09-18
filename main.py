@@ -126,10 +126,10 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
     def complete(result):
         nonlocal exit_code, failures, next_details_poll, poll_in_flight
         nonlocal poll_started_at, last_success_at
-        poll_in_flight = False
-        poll_started_at = None
         include_details, reading, error, elapsed = result
         if stopping:
+            poll_in_flight = False
+            poll_started_at = None
             return False
         try:
             if error is not None:
@@ -153,6 +153,9 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
                         exit_code = 1
                         mainloop.quit()
                         return False
+        finally:
+            poll_in_flight = False
+            poll_started_at = None
         return False
 
     def watchdog():
@@ -178,6 +181,32 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
         # process alive after the main loop exits if a USB driver ignores close.
         mainloop.quit()
         return False
+
+    def hard_watchdog():
+        """Exit even when the GLib/D-Bus thread is blocked in native code."""
+
+        while not stopping:
+            time.sleep(1.0)
+            started_at = poll_started_at
+            if started_at is None:
+                continue
+            elapsed = time.monotonic() - started_at
+            if elapsed <= config.poll_timeout:
+                continue
+            LOGGER.error(
+                "Serial poll or D-Bus publish exceeded watchdog limit of %.1fs "
+                "(running %.1fs); forcing process exit for supervisor restart",
+                config.poll_timeout,
+                elapsed,
+            )
+            try:
+                console.close()
+            except Exception:
+                pass
+            # os._exit is intentional: the main thread may be blocked in a
+            # native serial or D-Bus call and cannot process SIGTERM promptly.
+            logging.shutdown()
+            os._exit(1)
 
     def poll():
         nonlocal poll_in_flight, next_details_poll, poll_started_at
@@ -229,6 +258,11 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
     poll()
     GLib.timeout_add(int(config.poll_interval * 1000), poll)
     GLib.timeout_add(1000, watchdog)
+    threading.Thread(
+        target=hard_watchdog,
+        name="pylontech-hard-watchdog",
+        daemon=True,
+    ).start()
     LOGGER.info("D-Bus service %s started", config.service_name)
     mainloop.run()
     if serial_starter and poll_in_flight:
