@@ -13,11 +13,37 @@ import threading
 import time
 from dataclasses import replace
 
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - Windows development environment
+    fcntl = None
+
 from pylontech_dbus.config import DriverConfig, load_config
 from pylontech_dbus.serial_console import PylontechConsole
 
 
 LOGGER = logging.getLogger("dbus-pylontech-console")
+
+
+class NonBlockingStreamHandler(logging.StreamHandler):
+    """Write logs without allowing a dead runit logger to freeze the driver."""
+
+    def emit(self, record):
+        if fcntl is None:
+            super().emit(record)
+            return
+        try:
+            message = self.format(record) + "\n"
+            fd = self.stream.fileno()
+            flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+            if not flags & os.O_NONBLOCK:
+                fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+            os.write(fd, message.encode("utf-8", errors="replace"))
+        except (BlockingIOError, BrokenPipeError):
+            # Logging must never be allowed to stop serial polling.
+            return
+        except Exception:
+            self.handleError(record)
 
 
 def _arguments():
@@ -334,9 +360,14 @@ def main() -> int:
     if args.serial_port:
         config = _override_serial_port(config, args.serial_port)
 
+    handler = NonBlockingStreamHandler()
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+    )
     logging.basicConfig(
         level=getattr(logging, config.log_level, logging.INFO),
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        handlers=[handler],
+        force=True,
     )
     return _probe(config) if args.probe else _run(config, args.serial_starter)
 
