@@ -107,9 +107,15 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
     poll_in_flight = False
     poll_started_at = None
     last_success_at = None
+    service_started_at = time.monotonic()
     stopping = False
     stop_started_at = None
     shutdown_timeout = max(10.0, min(config.poll_timeout, 30.0))
+    no_success_timeout = max(
+        config.poll_timeout * 2.0,
+        config.poll_interval * 12.0,
+        60.0,
+    )
 
     def publish(reading, elapsed):
         service.publish(reading)
@@ -227,19 +233,32 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
                     os._exit(1)
                 continue
             started_at = poll_started_at
-            if started_at is None:
+            now = time.monotonic()
+            if started_at is not None:
+                elapsed = now - started_at
+                if elapsed > config.poll_timeout:
+                    LOGGER.error(
+                        "Serial poll or D-Bus publish exceeded watchdog limit of "
+                        "%.1fs (running %.1fs); forcing process exit for "
+                        "supervisor restart",
+                        config.poll_timeout,
+                        elapsed,
+                    )
+                    # os._exit is intentional: the main thread may be blocked
+                    # in native serial/D-Bus code and cannot process signals.
+                    logging.shutdown()
+                    os._exit(1)
                 continue
-            elapsed = time.monotonic() - started_at
-            if elapsed <= config.poll_timeout:
+
+            reference = last_success_at or service_started_at
+            if now - reference <= no_success_timeout:
                 continue
             LOGGER.error(
-                "Serial poll or D-Bus publish exceeded watchdog limit of %.1fs "
-                "(running %.1fs); forcing process exit for supervisor restart",
-                config.poll_timeout,
-                elapsed,
+                "No successful battery publication for %.1fs (limit %.1fs); "
+                "forcing process exit for supervisor restart",
+                now - reference,
+                no_success_timeout,
             )
-            # os._exit is intentional: the main thread may be blocked in a
-            # native serial or D-Bus call and cannot process SIGTERM promptly.
             logging.shutdown()
             os._exit(1)
 
@@ -292,6 +311,11 @@ def _run(config: DriverConfig, serial_starter: bool = False) -> int:
         name="pylontech-hard-watchdog",
         daemon=True,
     ).start()
+    LOGGER.info(
+        "Watchdog enabled: poll timeout %.1fs; no-success timeout %.1fs",
+        config.poll_timeout,
+        no_success_timeout,
+    )
     LOGGER.info("D-Bus service %s started", config.service_name)
     mainloop.run()
     if serial_starter and poll_in_flight:
