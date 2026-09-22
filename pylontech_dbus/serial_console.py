@@ -85,6 +85,7 @@ class PylontechConsole:
                 stopbits=serial.STOPBITS_ONE,
                 bytesize=serial.EIGHTBITS,
                 timeout=0,
+                write_timeout=self.timeout,
                 xonxoff=False,
                 rtscts=False,
                 dsrdtr=False,

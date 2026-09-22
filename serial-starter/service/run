@@ -9,20 +9,43 @@ export PYTHONPATH="/opt/victronenergy/dbus-systemcalc-py/ext/velib_python${PYTHO
 # name, so derive the port from it instead of relying on substitution.
 SERVICE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 DEVICE_NAME=${SERVICE_DIR##*.}
+RUN_DIR=$(pwd)
+RUN_DEVICE_NAME=${RUN_DIR##*.}
+case "$RUN_DEVICE_NAME" in
+    tty*) DEVICE_NAME=$RUN_DEVICE_NAME ;;
+esac
 if ! printf '%s\n' "$DEVICE_NAME" | grep -q '^tty'; then
-    # Some Venus releases link /service/dbus-pylonserial.<tty> directly to
-    # the persistent template instead of creating a runtime copy. In that
-    # layout, recover the TTY from the service link name.
-    for SERVICE_PATH in /service/dbus-pylonserial.*; do
-        SERVICE_NAME=${SERVICE_PATH##*.}
-        case "$SERVICE_NAME" in
-            tty*) DEVICE_NAME=$SERVICE_NAME; break ;;
+    # Some Venus releases pass the port through an environment variable when
+    # executing a persistent template instead of creating a runtime copy.
+    for CANDIDATE in "${SERIAL_PORT:-}" "${TTY:-}"; do
+        case "$CANDIDATE" in
+            /dev/tty*) DEVICE_NAME=${CANDIDATE##*/}; break ;;
+            tty*) DEVICE_NAME=$CANDIDATE; break ;;
         esac
     done
 fi
+if ! printf '%s\n' "$DEVICE_NAME" | grep -q '^tty'; then
+    TEMPLATE_TARGET=$(readlink -f "$SERVICE_DIR" 2>/dev/null || true)
+    MATCHED_DEVICE=""
+    for SERVICE_PATH in /service/dbus-pylonserial.tty*; do
+        [ -e "$SERVICE_PATH" ] || continue
+        SERVICE_TARGET=$(readlink -f "$SERVICE_PATH" 2>/dev/null || true)
+        [ -n "$TEMPLATE_TARGET" ] && [ "$SERVICE_TARGET" = "$TEMPLATE_TARGET" ] || continue
+        CANDIDATE=${SERVICE_PATH##*.}
+        if [ -n "$MATCHED_DEVICE" ] && [ "$MATCHED_DEVICE" != "$CANDIDATE" ]; then
+            echo "Multiple dbus-pylonserial services point to the same template" >&2
+            exit 1
+        fi
+        MATCHED_DEVICE=$CANDIDATE
+    done
+    [ -n "$MATCHED_DEVICE" ] && DEVICE_NAME=$MATCHED_DEVICE
+fi
 case "$DEVICE_NAME" in
     tty*) SERIAL_PORT="/dev/$DEVICE_NAME" ;;
-    *) SERIAL_PORT="/dev/TTY" ;;
+    *)
+        echo "Unable to resolve the serial TTY from the service directory" >&2
+        exit 1
+        ;;
 esac
 
 exec 2>&1

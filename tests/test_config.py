@@ -53,6 +53,7 @@ service_name=com.victronenergy.unsupported.pylontechmonitor_rs232
         self.assertEqual(100.0, config.battery.module_capacity_ah)
         self.assertEqual(1.2, config.serial.command_delay)
         self.assertEqual(60.0, config.details_poll_interval)
+        self.assertEqual(120.0, config.poll_timeout)
 
     def test_rejects_victron_battery_namespace(self):
         content = """[serial]

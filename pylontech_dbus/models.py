@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, Mapping, Optional, Tuple
+
+
+_CAPACITY_RE = re.compile(r"(?i)(?<![a-z])([0-9]+(?:\.[0-9]+)?)\s*ah\b")
 
 
 @dataclass(frozen=True)
@@ -179,6 +183,99 @@ class BankReading:
         return max(item.temperature for item in self.modules)
 
     @property
+    def temperature_low(self) -> Optional[float]:
+        """Return the lowest known module/sensor temperature in the bank."""
+
+        values = [
+            item.temperature_low
+            if item.temperature_low is not None
+            else item.temperature
+            for item in self.modules
+        ]
+        return min(values) if values else None
+
+    @property
+    def temperature_high(self) -> Optional[float]:
+        """Return the highest known module/sensor temperature in the bank."""
+
+        values = [
+            item.temperature_high
+            if item.temperature_high is not None
+            else item.temperature
+            for item in self.modules
+        ]
+        return max(values) if values else None
+
+    @property
+    def temperature_low_sensor(self) -> Optional[int]:
+        """Return the sensor ID belonging to the lowest explicit temperature."""
+
+        candidates = [
+            (item.temperature_low, item.temperature_low_sensor)
+            for item in self.modules
+            if item.temperature_low is not None
+            and item.temperature_low_sensor is not None
+        ]
+        return min(candidates, key=lambda item: item[0])[1] if candidates else None
+
+    @property
+    def temperature_high_sensor(self) -> Optional[int]:
+        """Return the sensor ID belonging to the highest explicit temperature."""
+
+        candidates = [
+            (item.temperature_high, item.temperature_high_sensor)
+            for item in self.modules
+            if item.temperature_high is not None
+            and item.temperature_high_sensor is not None
+        ]
+        return max(candidates, key=lambda item: item[0])[1] if candidates else None
+
+    @property
+    def mos_temperature(self) -> Optional[float]:
+        values = [
+            item.mos_temperature
+            for item in self.modules
+            if item.mos_temperature is not None
+        ]
+        return max(values) if values else None
+
+    @property
+    def nominal_capacity_ah(self) -> Optional[float]:
+        """Return the summed passport capacity when every module reports it."""
+
+        capacities = []
+        for module in self.modules:
+            specification = module.metadata.specification if module.metadata else None
+            match = _CAPACITY_RE.search(specification or "")
+            if match is None:
+                return None
+            capacities.append(float(match.group(1)))
+        return round(sum(capacities), 2) if capacities else None
+
+    @property
+    def remaining_capacity_ah(self) -> Optional[float]:
+        """Return the summed live Coulomb capacity when all modules have details."""
+
+        capacities = []
+        for module in self.modules:
+            if not module.cells:
+                return None
+            capacities.append(min(cell.remaining_capacity_ah for cell in module.cells))
+        return round(sum(capacities), 2) if capacities else None
+
+    @property
+    def balancing(self) -> Optional[int]:
+        states = [
+            cell.balancing
+            for module in self.modules
+            for cell in module.cells
+            if cell.balancing is not None
+        ]
+        if not states:
+            return None
+        return int(any(states))
+
+    @property
     def soh(self) -> Optional[float]:
         values = [
             item.statistics.soh
@@ -249,6 +346,14 @@ class BankReading:
             "soc": self.soc,
             "soh": self.soh,
             "temperature": self.temperature,
+            "temperature_low": self.temperature_low,
+            "temperature_high": self.temperature_high,
+            "temperature_low_sensor": self.temperature_low_sensor,
+            "temperature_high_sensor": self.temperature_high_sensor,
+            "mos_temperature": self.mos_temperature,
+            "nominal_capacity_ah": self.nominal_capacity_ah,
+            "remaining_capacity_ah": self.remaining_capacity_ah,
+            "balancing": self.balancing,
             "cell_voltage_low": self.cell_voltage_low,
             "cell_voltage_low_id": self.cell_voltage_low_id,
             "cell_voltage_high": self.cell_voltage_high,

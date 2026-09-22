@@ -113,11 +113,19 @@ Useful paths include:
 
 ```text
 /Soc                              aggregate state of charge
+/Soh                              aggregate state of health
 /System/Soh                       aggregate SOH when available
+/System/MinCellTemperature        lowest reported battery temperature
+/System/MinTemperatureCellId      cell ID associated with that minimum
+/System/MaxCellTemperature        highest reported battery temperature
+/System/MaxTemperatureCellId      cell ID associated with that maximum
+/System/MOSTemperature             highest reported MOS temperature
+/Balancing                         1 when any reported cell is balancing
 /Dc/0/Voltage                     bank voltage
 /Dc/0/Current                     bank current
 /Dc/0/Power                       bank power
-/Capacity                         current bank capacity when configured
+/Capacity                         live available bank capacity in Ah
+/InstalledCapacity                passport/nominal bank capacity in Ah
 /Modules/<n>/Soh                  module SOH
 /Modules/<n>/RemainingCapacity    module current capacity
 /Modules/<n>/Cycles               module cycle count
@@ -128,9 +136,12 @@ Useful paths include:
 ```
 
 `Coulomb` in the Pylontech `bat N` response is published as
-`RemainingCapacity` in Ah. A module's current capacity is derived from the
-cell telemetry; configured nominal capacity is separate and is only used for
-`/InstalledCapacity` when `battery.module_capacity_ah` is set.
+`RemainingCapacity` in Ah. The bank `/Capacity` is the sum of the live module
+capacities once details are available; it falls back to SOC multiplied by the
+nominal capacity when details are incomplete. `/InstalledCapacity` uses the
+configured `battery.module_capacity_ah` when set, otherwise it derives the
+passport capacity from each module's `Specification` (for example,
+`48V/50AH`).
 
 ## Read-only command scope
 
@@ -169,6 +180,7 @@ Important settings:
 | `driver.poll_interval` | Live `pwr` interval in seconds |
 | `driver.details_poll_interval` | `info`/`stat`/`bat` interval in seconds |
 | `driver.failure_threshold` | Consecutive failures before disconnect |
+| `driver.poll_timeout` | Watchdog limit for one serial poll; the process exits so serial-starter can restart it |
 | `driver.device_instance` | Unique Venus device instance |
 | `driver.service_name` | `battery` or isolated `dcload` namespace |
 
@@ -317,6 +329,28 @@ ps | grep '[s]upervise dbus-pylonserial.ttyUSB0'
 Terminate only the listed stale `supervise` PIDs, then activate the service once
 with `start-tty.sh` or by reconnecting the adapter. Do not run both activation
 methods for the same TTY.
+
+**The PID is alive but values stopped updating**
+
+Check both the supervisor and application logs. A live PID is not proof that a
+serial poll is still making progress: the driver has a watchdog and exits when
+one poll exceeds `driver.poll_timeout`, allowing serial-starter to restart it.
+
+```sh
+tail -n 100 /data/log/serial-starter/current | tai64nlocal
+tail -n 100 /data/log/dbus-pylonserial.ttyUSB0/current | tai64nlocal
+svstat /service/dbus-pylonserial.ttyUSB0
+readlink -f /service/dbus-pylonserial.ttyUSB0
+```
+
+The application log now records each poll duration and the watchdog message.
+If a USB adapter or kernel driver ignores `close()`, the poll worker is a
+daemon thread, so it cannot keep the process alive after the main loop exits.
+
+If the service cannot resolve its TTY, it now exits instead of silently using
+`/dev/TTY` or attaching the logger to an arbitrary stale service. Inspect
+`/data/log/serial-starter/current` and recreate the service for the actual
+adapter name (for example `ttyUSB0`).
 
 ## Uninstall
 

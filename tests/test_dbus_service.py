@@ -79,6 +79,10 @@ service_name=com.victronenergy.dcload.pylontechmonitor_rs232
             cell_voltage_low_id=1,
             cell_voltage_high=3.316,
             cell_voltage_high_id=1,
+            temperature_low=27.0,
+            temperature_low_sensor=10,
+            temperature_high=30.0,
+            temperature_high_sensor=5,
             metadata=ModuleMetadata(
                 address=1,
                 manufacturer="Pylon",
@@ -128,6 +132,13 @@ service_name=com.victronenergy.dcload.pylontechmonitor_rs232
         self.assertEqual(-13.08, values["/Dc/0/Current"])
         self.assertEqual(400.0, values["/InstalledCapacity"])
         self.assertEqual(274.0, values["/Capacity"])
+        self.assertEqual(93, values["/Soh"])
+        self.assertEqual(27.0, values["/System/MinCellTemperature"])
+        self.assertEqual(30.0, values["/System/MaxCellTemperature"])
+        self.assertEqual("C10", values["/System/MinTemperatureCellId"])
+        self.assertEqual("C5", values["/System/MaxTemperatureCellId"])
+        self.assertIsNone(values["/System/MOSTemperature"])
+        self.assertEqual(1, values["/Balancing"])
         self.assertEqual(1, values["/Modules/4/Online"])
         self.assertEqual(0xF0A1, values["/ProductId"])
         self.assertIn("4/4 modules", values["/Reason"])
@@ -151,6 +162,11 @@ service_name=com.victronenergy.dcload.pylontechmonitor_rs232
         self.assertEqual(0, values["/Connected"])
         self.assertEqual(2, values["/Alarms/BmsCable"])
         self.assertIsNone(values["/Dc/0/Voltage"])
+        self.assertIsNone(values["/Soh"])
+        self.assertIsNone(values["/System/MinCellTemperature"])
+        self.assertIsNone(values["/System/MinTemperatureCellId"])
+        self.assertIsNone(values["/System/MaxCellTemperature"])
+        self.assertIsNone(values["/System/MaxTemperatureCellId"])
         self.assertEqual(4, values["/System/NrOfModulesOffline"])
 
     def test_exposes_each_module_as_a_separate_service(self):
@@ -170,6 +186,40 @@ service_name=com.victronenergy.dcload.pylontechmonitor_rs232
         self.assertEqual(291, fourth.config.device_instance)
         self.assertEqual(1, first._service.values["/Modules/1/Online"])
         self.assertEqual(1, fourth._service.values["/Modules/1/Online"])
+
+    def test_capacity_aggregates_live_cells_and_passport_specification(self):
+        reading = parse_pwr_response(PWR_RESPONSE, expected_modules=4)
+        modules = []
+        for module in reading.modules:
+            modules.append(
+                replace(
+                    module,
+                    metadata=ModuleMetadata(
+                        address=module.number,
+                        specification="48V/50AH",
+                    ),
+                    cells=(
+                        CellReading(
+                            number=1,
+                            voltage=3.3,
+                            current=-1.0,
+                            temperature=25.0,
+                            soc=70.0,
+                            remaining_capacity_ah=45.0 + module.number,
+                            balancing=False,
+                            base_state="Dischg",
+                            voltage_state="Normal",
+                            current_state="Normal",
+                            temperature_state="Normal",
+                        ),
+                    ),
+                )
+            )
+
+        bank = BankReading.from_modules(modules)
+
+        self.assertEqual(200.0, bank.nominal_capacity_ah)
+        self.assertEqual(190.0, bank.remaining_capacity_ah)
 
     def test_module_identity_uses_manufacturer_model_and_serial(self):
         config = load_config(self.path)
