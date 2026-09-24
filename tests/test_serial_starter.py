@@ -57,10 +57,13 @@ class SerialStarterTest(unittest.TestCase):
         self.assertIn('/var/volatile/services/*', installer)
 
         stop_position = installer.index("stop-tty.sh")
+        clear_link_position = installer.index('rm -f "/dev/serial-starter/$DEVICE_NAME"')
         cache_position = installer.index('rm -f "/data/var/lib/serial-starter/$DEVICE_NAME"')
         restart_position = installer.index("svc -t /service/serial-starter")
         start_position = installer.index("start-tty.sh")
         trigger_position = installer.index("udevadm trigger --action=add")
+        self.assertLess(stop_position, clear_link_position)
+        self.assertLess(clear_link_position, start_position)
         self.assertLess(stop_position, cache_position)
         self.assertLess(cache_position, restart_position)
         self.assertLess(start_position, restart_position)

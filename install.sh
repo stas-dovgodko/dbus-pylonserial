@@ -233,6 +233,8 @@ if [ -n "$SERIAL_STARTER_DEVICE" ]; then
             echo "Warning: stop-tty.sh did not finish; continuing with serial-starter reload." >&2
         fi
     fi
+    # A timed-out stop helper can leave the old activation link behind.
+    rm -f "/dev/serial-starter/$DEVICE_NAME"
     # A previous probe (for example dbus-cgwacs) can remain supervised for this
     # TTY when udev classification changes. Stop only services attached to the
     # selected device so the Pylontech service can acquire the port.
