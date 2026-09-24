@@ -245,10 +245,6 @@ if [ -n "$SERIAL_STARTER_DEVICE" ]; then
     done
     remove_runtime_pylon_service
     rm -f "/data/var/lib/serial-starter/$DEVICE_NAME"
-    if [ -d /service/serial-starter ]; then
-        svc -t /service/serial-starter
-        sleep 2
-    fi
     # Use exactly one activation path. Calling start-tty.sh and then triggering
     # udev for the same TTY can leave multiple supervise processes behind.
     if [ -x /opt/victronenergy/serial-starter/start-tty.sh ]; then
@@ -259,6 +255,12 @@ if [ -n "$SERIAL_STARTER_DEVICE" ]; then
         udevadm trigger --action=add --sysname-match="$DEVICE_NAME"
     else
         udevadm trigger --action=add --subsystem-match=tty
+    fi
+    # start-tty.sh creates the /dev/serial-starter link; restart serstart after
+    # that link exists so it scans the selected TTY and creates the service.
+    if [ -d /service/serial-starter ]; then
+        svc -t /service/serial-starter
+        sleep 2
     fi
 
     echo "Installed serial-starter integration for $MATCH_DESCRIPTION"

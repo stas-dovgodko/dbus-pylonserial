@@ -63,7 +63,7 @@ class SerialStarterTest(unittest.TestCase):
         trigger_position = installer.index("udevadm trigger --action=add")
         self.assertLess(stop_position, cache_position)
         self.assertLess(cache_position, restart_position)
-        self.assertLess(restart_position, start_position)
+        self.assertLess(start_position, restart_position)
         self.assertIn(
             "run_tty_helper /opt/victronenergy/serial-starter/stop-tty.sh",
             installer,
