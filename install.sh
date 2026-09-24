@@ -97,7 +97,7 @@ remove_runtime_pylon_service() {
     # Remove only this exact generated service so the refreshed template is
     # copied and TTY substitution is applied on the next discovery.
     case "$runtime_dir" in
-        /run/*)
+        /run/*|/var/volatile/services/*)
             rm -rf "$runtime_dir"
             rm -f "$service"
             ;;
