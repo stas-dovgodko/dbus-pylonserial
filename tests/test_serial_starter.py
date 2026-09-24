@@ -54,6 +54,7 @@ class SerialStarterTest(unittest.TestCase):
         self.assertNotIn("platform-1c14400.usb-usb-0:1:1.0", installer)
         self.assertNotIn('ENV{ID_MODEL}==', installer)
         self.assertNotIn('rm -rf /data/var/lib/serial-starter', installer)
+        self.assertIn('/var/volatile/services/*', installer)
 
         stop_position = installer.index("stop-tty.sh")
         cache_position = installer.index('rm -f "/data/var/lib/serial-starter/$DEVICE_NAME"')
