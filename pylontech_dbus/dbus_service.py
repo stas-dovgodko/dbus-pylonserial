@@ -642,7 +642,7 @@ class PylontechDbusService:
     def disconnect(self) -> None:
         expected = self.config.battery.expected_modules or self._last_module_count
         self._set("/Connected", 0)
-        self._set("/ErrorCode", 1)
+        self._set("/ErrorCode", 0)
         self._set("/Alarms/BmsCable", 2)
         self._set("/System/NrOfModulesOnline", 0)
         self._set("/System/NrOfModulesOffline", expected)

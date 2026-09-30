@@ -160,6 +160,7 @@ service_name=com.victronenergy.dcload.pylontechmonitor_rs232
 
         service.disconnect()
         self.assertEqual(0, values["/Connected"])
+        self.assertEqual(0, values["/ErrorCode"])
         self.assertEqual(2, values["/Alarms/BmsCable"])
         self.assertIsNone(values["/Dc/0/Voltage"])
         self.assertIsNone(values["/Soh"])
